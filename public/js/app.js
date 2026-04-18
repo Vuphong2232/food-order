@@ -4,6 +4,7 @@
 let cart = [];
 let searchQuery = '';
 let currentCategory = 'all';
+let currentPriceRange = '';
 let cartOpen = false;
 let sidebarOpen = false;
 
@@ -20,34 +21,66 @@ function formatPrice(price) {
 // =====================
 // Toast
 // =====================
-function showToast(message, type) {
-    type = type || 'success';
-    var container = document.getElementById('toast-container');
+window.showToast = function(message, type = 'success') {
+    const container = document.getElementById('toast-container');
     if (!container) return;
 
-    var icons = {
-        success: 'lucide:check-circle-2',
-        error: 'lucide:alert-circle',
-        info: 'lucide:info',
-        warning: 'lucide:alert-triangle'
-    };
-    var colors = {
-        success: 'text-green-500',
-        error: 'text-red-500',
-        info: 'text-brown-500',
-        warning: 'text-yellow-500'
+    const configs = {
+        success: {
+            icon: 'lucide:check-circle',
+            colorClass: 'text-green-500',
+            borderClass: 'border-green-100',
+            bgClass: 'bg-white'
+        },
+        error: {
+            icon: 'lucide:x-circle',
+            colorClass: 'text-red-500',
+            borderClass: 'border-red-100',
+            bgClass: 'bg-white'
+        },
+        info: {
+            icon: 'lucide:info',
+            colorClass: 'text-blue-500',
+            borderClass: 'border-blue-100',
+            bgClass: 'bg-white'
+        }
     };
 
-    var toast = document.createElement('div');
-    toast.className = 'toast pointer-events-auto flex items-center gap-2.5 bg-white border border-brown-100 shadow-xl shadow-brown-900/10 rounded-2xl px-4 py-3 min-w-[280px]';
-    toast.innerHTML = '<span class="iconify ' + (colors[type] || colors.info) + ' text-lg shrink-0" data-icon="' + (icons[type] || icons.info) + '"></span><span class="text-sm text-brown-800 flex-1">' + message + '</span>';
+    const config = configs[type] || configs.info;
+
+    const toast = document.createElement('div');
+    toast.className = `
+        toast pointer-events-auto flex items-center gap-3 p-4 rounded-2xl 
+        shadow-2xl border transform transition-all duration-300 
+        translate-x-full opacity-0 ${config.borderClass} ${config.bgClass}
+        min-w-[300px] max-w-sm
+    `;
+
+    toast.innerHTML = `
+        <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full ${type === 'success' ? 'bg-green-100' : 'bg-red-100'}">
+            <span class="iconify ${config.colorClass} text-lg" data-icon="${config.icon}"></span>
+        </div>
+        <div class="flex-1 text-sm font-medium text-gray-800">${message}</div>
+        <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+            <span class="iconify" data-icon="lucide:x"></span>
+        </button>
+    `;
+
+    if (container.children.length >= 4) {
+    container.removeChild(container.firstChild);
+}
+
     container.appendChild(toast);
 
-    setTimeout(function() {
-        toast.classList.add('removing');
-        setTimeout(function() { toast.remove(); }, 250);
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-x-full', 'opacity-0');
+    });
+
+    setTimeout(() => {
+        toast.classList.add('translate-x-full', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
     }, 3000);
-}
+};
 
 // =====================
 // Cart
@@ -60,7 +93,7 @@ function addToCart(id, name, price, img) {
         cart.push({ id: id, name: name, price: price, img: img, qty: 1 });
     }
     updateCartUI();
-    showToast('Da them "' + name + '" vao gio hang');
+    showToast('Đã thêm "' + name + '" vào giỏ hàng');
 }
 
 function removeFromCart(id) {
@@ -268,7 +301,7 @@ function loadCart() {
                 <div class="flex items-center gap-3 mb-4 border-b border-brown-100 pb-3">
 
                     <!-- ẢNH -->
-                    <img src="${item.product.image ?? 'https://via.placeholder.com/80'}" 
+                    <img src="${item.product.image_url ?? 'https://via.placeholder.com/80'}" 
                         class="w-16 h-16 object-cover rounded-xl shrink-0 border border-brown-100">
 
                     <!-- INFO -->
@@ -355,7 +388,10 @@ function closeDeleteModal() {
 
 // nút xác nhận xóa
 document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('btnConfirmDelete').onclick = function () {
+    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+    if (!btnConfirmDelete) return;
+
+    btnConfirmDelete.onclick = function () {
         if (!deleteId) return;
 
         let formData = new FormData();
@@ -976,21 +1012,7 @@ function handleSearch(val) {
     applyFilters();
 }
 
-function filterCategory(category) {
-    currentCategory = category;
 
-    document.querySelectorAll('.cat-tab').forEach(tab => {
-        if (tab.getAttribute('data-cat') === category) {
-            tab.classList.add('text-brown-900');
-            tab.classList.remove('text-brown-400');
-        } else {
-            tab.classList.remove('text-brown-900');
-            tab.classList.add('text-brown-400');
-        }
-    });
-
-    applyFilters();
-}
 
 function applyFilters() {
     let cards = document.querySelectorAll('#product-grid .product-card');
@@ -1049,6 +1071,7 @@ function filterPrice(range) {
 
 const bestSellerIds = window.bestSellerIds || [];
 
+
 function filterCategory(category) {
     const items = document.querySelectorAll('.product-card');
 
@@ -1078,6 +1101,53 @@ function filterCategory(category) {
         activeTab.classList.remove('text-brown-400');
         activeTab.classList.add('text-brown-900', 'border-brown-900');
     }
+}
+
+
+function handleSearch(val) {
+    searchQuery = (val || '').toLowerCase().trim();
+    applyFilters();
+}
+
+
+function filterPrice(range) {
+    currentPriceRange = range || '';
+    applyFilters();
+}
+
+
+function applyFilters() {
+    const items = document.querySelectorAll('.product-card');
+
+    items.forEach(item => {
+        const itemCategory = item.dataset.category || item.dataset.cat || '';
+        const itemId = parseInt(item.dataset.id || 0);
+        const itemPrice = parseInt(item.dataset.price || 0);
+        const itemName = (item.dataset.name || item.innerText || '').toLowerCase();
+
+        let matchCategory = false;
+        if (currentCategory === 'all') {
+            matchCategory = true;
+        } else if (currentCategory === 'best-seller') {
+            matchCategory = bestSellerIds.includes(itemId);
+        } else {
+            matchCategory = itemCategory === currentCategory;
+        }
+
+        let matchPrice = true;
+        if (currentPriceRange) {
+            const [min, max] = currentPriceRange.split('-').map(Number);
+            if (!isNaN(min) && itemPrice < min) matchPrice = false;
+            if (!isNaN(max) && itemPrice > max) matchPrice = false;
+        }
+
+        let matchSearch = true;
+        if (searchQuery) {
+            matchSearch = itemName.includes(searchQuery);
+        }
+
+        item.style.display = (matchCategory && matchPrice && matchSearch) ? 'block' : 'none';
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1115,8 +1185,6 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsDataURL(file);
         });
     }
-
-    loadProducts();
 });
 
 document.addEventListener('submit', function(e) {

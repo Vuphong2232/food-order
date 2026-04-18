@@ -14,29 +14,13 @@
                 Tất cả
             </a>
 
-            <a href="{{ route('home', ['category' => 'mon-anh-nhau', 'price' => request('price')]) }}"
-            class="cat-tab text-sm font-medium pb-0.5 border-b-2 whitespace-nowrap transition-all duration-200
-            {{ request('category') == 'mon-anh-nhau' ? 'text-brown-900 border-brown-900' : 'text-brown-400 border-transparent' }}">
-                Món ăn nhậu
-            </a>
-
-            <a href="{{ route('home', ['category' => 'mon-an-kem', 'price' => request('price')]) }}"
-            class="cat-tab text-sm font-medium pb-0.5 border-b-2 whitespace-nowrap transition-all duration-200
-            {{ request('category') == 'mon-an-kem' ? 'text-brown-900 border-brown-900' : 'text-brown-400 border-transparent' }}">
-                Món ăn kèm
-            </a>
-
-            <a href="{{ route('home', ['category' => 'mon-an-chinh', 'price' => request('price')]) }}"
-            class="cat-tab text-sm font-medium pb-0.5 border-b-2 whitespace-nowrap transition-all duration-200
-            {{ request('category') == 'mon-an-chinh' ? 'text-brown-900 border-brown-900' : 'text-brown-400 border-transparent' }}">
-                Món ăn chính
-            </a>
-
-            <a href="{{ route('home', ['category' => 'nuoc-giai-khat', 'price' => request('price')]) }}"
-            class="cat-tab text-sm font-medium pb-0.5 border-b-2 whitespace-nowrap transition-all duration-200
-            {{ request('category') == 'nuoc-giai-khat' ? 'text-brown-900 border-brown-900' : 'text-brown-400 border-transparent' }}">
-                Nước giải khát
-            </a>
+            @foreach($categories as $cat)
+                <a href="{{ route('home', ['category' => $cat->slug, 'price' => request('price')]) }}"
+                class="cat-tab text-sm font-medium pb-0.5 border-b-2 whitespace-nowrap transition-all duration-200
+                {{ request('category') == $cat->slug ? 'text-brown-900 border-brown-900' : 'text-brown-400 border-transparent' }}">
+                    {{ $cat->name }}
+                </a>
+            @endforeach
 
             <a href="{{ route('home', ['category' => 'best-seller', 'price' => request('price')]) }}"
             class="cat-tab text-sm font-medium pb-0.5 border-b-2 whitespace-nowrap transition-all duration-200

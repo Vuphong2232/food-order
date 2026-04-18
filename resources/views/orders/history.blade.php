@@ -41,7 +41,60 @@
         </form>
     </div>
 
-    <div id="ordersHistoryContainer">
+    <div id="ordersHistorySkeleton" class="space-y-3 ">
+    @for($i = 0; $i < 5; $i++)
+        <div class="bg-white rounded-2xl shadow-sm border border-brown-100 p-4 relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-brown-50 rounded-full opacity-40"></div>
+
+            <div class="relative z-10">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 pb-3 border-b border-dashed border-brown-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-lg skeleton"></div>
+                        <div>
+                            <div class="h-3 w-20 rounded skeleton mb-2"></div>
+                            <div class="h-4 w-36 rounded skeleton"></div>
+                        </div>
+                    </div>
+
+                    <div class="h-8 w-32 rounded-lg skeleton"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    <div class="md:col-span-7 space-y-3">
+                        @if($isAdminMode)
+                            <div class="flex items-center gap-2 p-2 rounded-lg border border-gray-100">
+                                <div class="w-7 h-7 rounded-full skeleton"></div>
+                                <div class="flex-1">
+                                    <div class="h-3 w-16 rounded skeleton mb-2"></div>
+                                    <div class="h-4 w-40 rounded skeleton"></div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-full skeleton"></div>
+                            <div class="h-6 w-36 rounded-full skeleton"></div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-5 flex flex-col items-end justify-center gap-2 md:pl-4">
+                        <div class="text-right">
+                            <div class="h-3 w-24 rounded skeleton mb-2 ml-auto"></div>
+                            <div class="h-6 w-28 rounded skeleton ml-auto"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-3 border-t border-brown-100 flex flex-wrap gap-2 justify-end">
+                    <div class="h-8 w-24 rounded-lg skeleton"></div>
+                    <div class="h-8 w-24 rounded-lg skeleton"></div>
+                </div>
+            </div>
+        </div>
+    @endfor
+</div>
+
+    <div id="ordersHistoryContainer" class="hidden">
         @if($orders->count() > 0)
             <div id="order-list" class="space-y-3">
                 @foreach($orders as $order)
@@ -134,6 +187,28 @@
                                         <span class="iconify text-sm" data-icon="lucide:package-search"></span>
                                         Theo dõi
                                     </button>
+                                    
+                                <!-- @if($order->items->count() > 0)
+                                    <button type="button"
+                                            onclick="event.stopPropagation(); openReviewModal({{ $order->id }}, {{ $order->items->first()->product_id }})"
+                                            class="px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-xs font-semibold hover:bg-yellow-100 hover:border-yellow-300 transition-colors flex items-center gap-1.5">
+                                            <span class="iconify text-sm" data-icon="lucide:star"></span>
+                                        Đánh giá
+                                    </button>
+                                @endif                             -->
+                                @if($order->items->count() > 0 &&
+                                    (
+                                        $order->status === 'completed' ||
+                                        $order->process_status === 'completed'
+                                    )
+                                )
+                                    <button type="button"
+                                            onclick="event.stopPropagation(); openReviewSpModal({{ $order->id }}, {{ $order->items->first()->product_id }})"
+                                            class="px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-xs font-semibold hover:bg-yellow-100 hover:border-yellow-300 transition-colors flex items-center gap-1.5">
+                                        <span class="iconify text-sm" data-icon="lucide:star"></span>
+                                        Đánh giá
+                                    </button>
+                                @endif
                                 @endif
 
                                 @if($isAdminMode)
@@ -219,50 +294,152 @@
     </div>
 
     <script>
-        (function () {
-            const searchInput = document.getElementById('orderSearchInput');
-            const container = document.getElementById('ordersHistoryContainer');
-            let timer = null;
+    (function () {
+        const searchInput = document.getElementById('orderSearchInput');
+        const container = document.getElementById('ordersHistoryContainer');
+        const skeleton = document.getElementById('ordersHistorySkeleton');
+        let timer = null;
 
-            if (!searchInput || !container) return;
+        if (!searchInput || !container || !skeleton) return;
 
-            searchInput.addEventListener('input', function () {
-                clearTimeout(timer);
+        function showSkeleton() {
+            skeleton.classList.remove('hidden');
+            container.classList.add('hidden');
+        }
 
-                timer = setTimeout(function () {
-                    const keyword = searchInput.value.trim();
-                    const url = new URL("{{ route('orders.history') }}", window.location.origin);
+        function hideSkeleton() {
+            skeleton.classList.add('hidden');
+            container.classList.remove('hidden');
+        }
 
-                    if (keyword !== '') {
-                        url.searchParams.set('search', keyword);
+        searchInput.addEventListener('input', function () {
+            clearTimeout(timer);
+
+            timer = setTimeout(function () {
+                const keyword = searchInput.value.trim();
+                const url = new URL("{{ route('orders.history') }}", window.location.origin);
+
+                if (keyword !== '') {
+                    url.searchParams.set('search', keyword);
+                }
+
+                @if(request('filter'))
+                    url.searchParams.set('filter', "{{ request('filter') }}");
+                @endif
+
+                showSkeleton();
+
+                fetch(url.toString(), {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function (response) {
+                    return response.text();
+                })
+                .then(function (html) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+
+                    const newContainer = temp.querySelector('#ordersHistoryContainer');
+                    if (newContainer) {
+                        container.innerHTML = newContainer.innerHTML;
+                        window.history.replaceState({}, '', url.toString());
                     }
 
-                    fetch(url.toString(), {
-                        method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(function (response) {
-                        return response.text();
-                    })
-                    .then(function (html) {
-                        const temp = document.createElement('div');
-                        temp.innerHTML = html;
+                    hideSkeleton();
+                })
+                .catch(function (error) {
+                    console.error(error);
+                    hideSkeleton();
+                });
+            }, 300);
+        });
+    })();
+    window.addEventListener('load', function () {
+    const skeleton = document.getElementById('ordersHistorySkeleton');
+    const container = document.getElementById('ordersHistoryContainer');
 
-                        const newContainer = temp.querySelector('#ordersHistoryContainer');
-                        if (newContainer) {
-                            container.innerHTML = newContainer.innerHTML;
-                            window.history.replaceState({}, '', url.toString());
-                        }
-                    })
-                    .catch(function (error) {
-                        console.error(error);
-                    });
-                }, 300);
-            });
-        })();
-    </script>
+    setTimeout(() => {
+        skeleton.classList.add('hidden');
+        container.classList.remove('hidden');
+    }, 800);
+});
+
+async function openReviewSpModal(orderId, productId) {
+    const modal = document.getElementById('reviewSpModal');
+    const content = document.getElementById('reviewSpModalContent');
+
+    content.innerHTML = `
+        <div class="w-full bg-white rounded-3xl shadow-2xl border border-brown-100 p-8 text-center text-brown-600">
+            Đang tải...
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    try {
+        const res = await fetch(`/orders/${orderId}/review-sp/${productId}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        const html = await res.text();
+        content.innerHTML = html;
+
+        if (window.Iconify) Iconify.scan();
+    } catch (e) {
+        content.innerHTML = `
+            <div class="w-full bg-white rounded-3xl shadow-2xl border border-red-100 p-8 text-center text-red-500">
+                Không tải được giao diện đánh giá đơn hàng
+            </div>
+        `;
+    }
+}
+
+function closeReviewSpModal() {
+    document.getElementById('reviewSpModal').classList.add('hidden');
+    document.getElementById('reviewSpModalContent').innerHTML = '';
+    document.body.style.overflow = '';
+}
+
+async function openReviewModal(orderId, productId) {
+    const modal = document.getElementById('reviewModal');
+    const content = document.getElementById('reviewModalContent');
+
+    content.innerHTML = `
+        <div class="w-full bg-white rounded-3xl shadow-2xl border border-brown-100 p-8 text-center text-brown-600">
+            Đang tải...
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    try {
+        const res = await fetch(`/orders/review/${orderId}/${productId}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        const html = await res.text();
+        content.innerHTML = html;
+
+        if (window.Iconify) Iconify.scan();
+    } catch (e) {
+        content.innerHTML = `
+            <div class="w-full bg-white rounded-3xl shadow-2xl border border-red-100 p-8 text-center text-red-500">
+                Không tải được form đánh giá sản phẩm
+            </div>
+        `;
+    }
+}
+
+function closeReviewModal() {
+    document.getElementById('reviewModal').classList.add('hidden');
+    document.getElementById('reviewModalContent').innerHTML = '';
+}
+</script>
 
 </section>
 @endsection
@@ -270,11 +447,26 @@
 @section('modal')
     @include('orders.invoice')
     @include('orders.manage_modal')
+    @include('orders.review')
     
     <div id="trackModal" class="fixed inset-0 z-[99999] hidden">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeTrackModal()"></div>
         <div class="relative min-h-screen flex items-center justify-center p-4 sm:p-6">
             <div id="trackModalContent" class="w-full max-w-3xl"></div>
+        </div>
+    </div>
+
+    <div id="reviewSpModal" class="fixed inset-0 z-[9999] hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeReviewSpModal()"></div>
+        <div class="relative z-10 w-full h-full flex items-center justify-center p-4">
+            <div id="reviewSpModalContent" class="w-full max-w-2xl"></div>
+        </div>
+    </div>
+
+    <div id="reviewModal" class="fixed inset-0 z-[10000] hidden">
+        <div class="absolute inset-0 bg-black/55 backdrop-blur-sm" onclick="closeReviewModal()"></div>
+        <div class="relative z-10 w-full h-full flex items-center justify-center p-4">
+            <div id="reviewModalContent" class="w-full max-w-xl"></div>
         </div>
     </div>
 @endsection

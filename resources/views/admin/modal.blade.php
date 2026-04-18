@@ -30,14 +30,9 @@
                     <div>
                         <label class="block text-sm font-medium text-brown-700 mb-1.5">Danh mục</label>
 
-                        <select name="category" id="form-category"
+                        <select name="category_id" id="form-category"
                             class="w-full h-11 px-4 bg-white border border-brown-200 rounded-xl text-sm text-brown-900 outline-none focus:border-brown-400 focus:ring-2 focus:ring-brown-400/10 transition-all appearance-none cursor-pointer">
-
-                            <option value="mon-anh-nhau">Món ăn nhậu</option>
-                            <option value="mon-an-kem">Món ăn kèm</option>
-                            <option value="mon-an-chinh">Món ăn chính</option>
-                            <option value="nuoc-giai-khat">Nước giải khát</option>
-
+                            <option value="" disabled selected>Chọn danh mục</option>
                         </select>
                     </div>
                     <div>

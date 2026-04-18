@@ -5,10 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
-use App\Models\CartItem; // Bổ sung để sử dụng model CartItem
+use App\Models\CartItem; 
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth; // Bổ sung để sửa lỗi "Auth class not found"
+use Illuminate\Support\Facades\Auth; 
 
 class OrderController extends Controller
 {
@@ -78,6 +79,8 @@ class OrderController extends Controller
             'process_status' => 'received',
         ]);
 
+
+
         foreach ($cartItems as $item) {
             if ($item->product) {
                 OrderItem::create([
@@ -114,12 +117,9 @@ class OrderController extends Controller
 
 public function adminNotifications()
 {
-    if (!auth()->check() || auth()->user()->role !== 'admin') {
-        abort(403);
-    }
-
-    // Lấy 20 thông báo mới nhất từ DB
-    $notifications = \App\Models\Notification::latest()->take(20)->get();
+    $notifications = Notification::whereNull('user_id')
+        ->latest()
+        ->get();
 
     return view('admin.notifications', compact('notifications'));
 }
@@ -133,16 +133,11 @@ public function getNotificationCount()
 
 public function userNotifications()
 {
-    if (!auth()->check()) {
-        abort(403, 'Vui lòng đăng nhập');
-    }
-
-    $notifications = Order::where('user_id', auth()->id())
+    $notifications = Notification::where('user_id', auth()->id())
         ->latest()
-        ->take(20)
         ->get();
 
-    return view('user.notifications', compact('notifications'));
+    return view('admin.notifications', compact('notifications'));
 }
 
     /**
@@ -167,7 +162,7 @@ public function history(Request $request)
         && auth()->check()
         && auth()->user()->role === 'admin';
 
-    $query = \App\Models\Order::with('user');
+    $query = \App\Models\Order::with(['user', 'items.product']);
 
     if (!$isAdminMode) {
         $query->where('user_id', auth()->id());
@@ -175,6 +170,10 @@ public function history(Request $request)
 
     if ($request->search) {
         $query->where('code', 'like', '%' . $request->search . '%');
+    }
+
+    if ($request->filter === 'processing') {
+        $query->where('process_status', '!=', 'completed');
     }
 
     $orders = $query->orderBy('created_at', 'desc')
@@ -230,6 +229,7 @@ public function getDetailApi($id)
     ]);
 }
 
+
 public function updateProcess(Request $request, $id)
 {
     $isAdminMode = session('admin_mode', false)
@@ -248,9 +248,58 @@ public function updateProcess(Request $request, $id)
     ]);
 
     $order = \App\Models\Order::findOrFail($id);
+
+    // Lưu trạng thái cũ (nếu cần so sánh)
+    $oldStatus = $order->process_status;
+
     $order->process_status = $request->process_status;
     $order->status = $request->process_status === 'completed' ? 'completed' : 'pending';
     $order->save();
+
+    // 🔔 Tạo notification cho USER
+    if ($order->user_id) {
+
+        $title = 'Cập nhật đơn hàng';
+        $message = '';
+
+        switch ($order->process_status) {
+            case 'received':
+                $message = "Đơn hàng <strong>{$order->code}</strong> đã được tiếp nhận.";
+                break;
+
+            case 'preparing':
+                $message = "Đơn hàng <strong>{$order->code}</strong> đang được chuẩn bị.";
+                break;
+
+            case 'shipping':
+                $message = "Đơn hàng <strong>{$order->code}</strong> đang được giao, hãy chú ý điện thoại nhé.";
+                break;
+
+            case 'completed':
+                $message = "
+                Đơn hàng <strong>{$order->code}</strong> đã hoàn tất 🎉<br>
+                Cảm ơn bạn đã ủng hộ ❤️<br><br>
+
+                ⭐ Nếu bạn hài lòng, hãy đánh giá 5 sao để ủng hộ shop nhé!<br>
+                💬 Nếu có góp ý, đừng ngại để lại bình luận để shop cải thiện tốt hơn.<br><br>
+
+                <b>Chúc bạn ăn ngon miệng!</b>
+                ";
+        }
+
+        Notification::create([
+            'user_id' => $order->user_id,
+            'type' => 'order_process_updated',
+            'title' => $title,
+            'message' => $message,
+            'data' => [
+                'order_id' => $order->id,
+                'order_code' => $order->code,
+                'process_status' => $order->process_status,
+            ],
+            'is_read' => 0,
+        ]);
+    }
 
     return response()->json([
         'success' => true,
@@ -282,7 +331,7 @@ public function destroy($id)
 
 public function track($id)
 {
-    $order = \App\Models\Order::with('user')->findOrFail($id);
+    $order = \App\Models\Order::with(['user', 'items.product'])->findOrFail($id);
 
     $isAdminMode = session('admin_mode', false)
         && auth()->check()
@@ -308,9 +357,9 @@ public function adminReport(Request $request)
 
     $period = $request->get('period', 'month');
 
-    $orderQuery = Order::whereIn('status', ['completed', 'shipping']);
+    $completedOrderQuery = Order::where('process_status', 'completed');
 
-    $orderQuery->when($period == 'week', function ($q) {
+    $completedOrderQuery->when($period == 'week', function ($q) {
         return $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
     })->when($period == 'month', function ($q) {
         return $q->whereMonth('created_at', now()->month)
@@ -319,8 +368,31 @@ public function adminReport(Request $request)
         return $q->whereYear('created_at', now()->year);
     });
 
-    $revenue = (clone $orderQuery)->sum('total_amount');
-    $ordersCount = (clone $orderQuery)->count();
+    $processingOrderQuery = Order::where('process_status', '!=', 'completed');
+
+    $processingOrderQuery->when($period == 'week', function ($q) {
+        return $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+    })->when($period == 'month', function ($q) {
+        return $q->whereMonth('created_at', now()->month)
+                 ->whereYear('created_at', now()->year);
+    })->when($period == 'year', function ($q) {
+        return $q->whereYear('created_at', now()->year);
+    });
+
+    $revenueQuery = Order::where('process_status', 'completed');
+
+    $revenueQuery->when($period == 'week', function ($q) {
+        return $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+    })->when($period == 'month', function ($q) {
+        return $q->whereMonth('created_at', now()->month)
+                 ->whereYear('created_at', now()->year);
+    })->when($period == 'year', function ($q) {
+        return $q->whereYear('created_at', now()->year);
+    });
+
+    $revenue = (clone $revenueQuery)->sum('total_amount');
+    $ordersCount = (clone $completedOrderQuery)->count();
+    $processingOrders = (clone $processingOrderQuery)->count();
 
     $topProductsQuery = OrderItem::select(
             'products.id',
@@ -331,7 +403,7 @@ public function adminReport(Request $request)
         )
         ->join('products', 'order_items.product_id', '=', 'products.id')
         ->join('orders', 'order_items.order_id', '=', 'orders.id')
-        ->whereIn('orders.status', ['completed', 'shipping']);
+        ->where('orders.process_status', 'completed');
 
     $topProductsQuery->when($period == 'week', function ($q) {
         return $q->whereBetween('orders.created_at', [now()->startOfWeek(), now()->endOfWeek()]);
@@ -346,7 +418,18 @@ public function adminReport(Request $request)
         ->groupBy('products.id', 'products.name', 'products.image', 'products.price')
         ->orderByDesc('sold_count')
         ->limit(3)
-        ->get();
+        ->get()
+        ->map(function ($p) {
+            if (!$p->image) {
+                $p->image_url = 'https://via.placeholder.com/400';
+            } elseif (str_starts_with($p->image, 'http://') || str_starts_with($p->image, 'https://')) {
+                $p->image_url = $p->image;
+            } else {
+                $p->image_url = asset('storage/' . ltrim($p->image, '/'));
+            }
+
+            return $p;
+        });
 
     $newUsersQuery = User::query();
 
@@ -360,19 +443,18 @@ public function adminReport(Request $request)
     });
 
     $newUsers = $newUsersQuery->count();
-
-    $pendingOrders = Order::where('status', 'pending')->count();
     $avgOrderValue = $ordersCount > 0 ? $revenue / $ordersCount : 0;
+    $bestSellerIds = $topProducts->pluck('id')->toArray();
 
     $reportStats = [
         'revenue' => $revenue,
         'orders_count' => $ordersCount,
         'products_sold' => $topProducts->sum('sold_count'),
-        'pending_orders' => $pendingOrders,
+        'processing_orders' => $processingOrders,
         'avg_order_value' => $avgOrderValue,
         'new_users' => $newUsers,
     ];
 
-    return view('report-page', compact('reportStats', 'topProducts'));
+    return view('report-page', compact('reportStats', 'topProducts', 'bestSellerIds'));
 }
 }

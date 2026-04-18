@@ -14,7 +14,7 @@ class Product extends Model
         'price',
         'description',
         'image',
-        'category',
+        'category_id',
         'is_active',
     ];
 
@@ -23,21 +23,35 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
-    // Danh mục tiếng Việt
-    public function getCategoryLabelAttribute()
+    protected $appends = [
+        'image_url',
+    ];
+
+     public function category()
     {
-        return match($this->category) {
-            'mon-chinh'    => 'Món chính',
-            'mon-an-vat'   => 'Ăn vặt',
-            'do-uong'      => 'Đồ uống',
-            'trang-mieng'  => 'Tráng miệng',
-            default        => 'Khác',
-        };
+        return $this->belongsTo(Category::class);
     }
 
-    // Định dạng giá
     public function getFormattedPriceAttribute()
     {
         return number_format($this->price, 0, ',', '.') . '₫';
     }
+
+    public function getImageUrlAttribute()
+    {
+        if (!$this->image) {
+            return 'https://via.placeholder.com/400';
+        }
+
+        if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
+            return $this->image;
+        }
+
+        return asset('storage/' . ltrim($this->image, '/'));
+    }
+
+    public function reviews()
+{
+    return $this->hasMany(\App\Models\Review::class);
+}
 }

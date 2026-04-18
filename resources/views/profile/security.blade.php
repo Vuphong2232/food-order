@@ -1,4 +1,14 @@
-@extends('layouts.app') @php/** Sửa 'layout.master' thành tên layout thật của bạn */@endphp
+@extends('layouts.app')
+
+@section('title', 'Thông tin cá nhân')
+
+@section('sidebar')
+    @include('shared.sidebar')
+@endsection
+
+@section('footer')
+    @include('shared.footer')
+@endsection
 
 @section('content')
 <div class="max-w-2xl mx-auto p-4 md:p-8">
@@ -10,13 +20,6 @@
         <h1 class="text-3xl font-bold text-brown-900">Thông tin cá nhân</h1>
         <p class="text-brown-500 mt-1">Quản lý thông tin hồ sơ của bạn</p>
     </div>
-
-    <!-- BUTTON -->
-    <a href="{{ route('home') }}" 
-       class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-brown-200 text-brown-600 hover:bg-brown-50 hover:border-brown-300 transition-all font-medium shadow-sm">
-        <span class="iconify text-xl" data-icon="lucide:arrow-left"></span>
-        <span>Quay lại</span>
-    </a>
 
 </div>
 

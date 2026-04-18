@@ -11,7 +11,6 @@
 @endsection
 
 @section('content')
-    @include('admin.stats')
     @include('admin.table')
 @endsection
 

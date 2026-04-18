@@ -35,168 +35,166 @@
 
             @if(isset($selectedProduct))
                 <a href="/home"
-                class="px-4 py-2 bg-brown-100 text-brown-700 rounded-xl hover:bg-brown-200 transition whitespace-nowrap">
+                   class="px-4 py-2 bg-brown-100 text-brown-700 rounded-xl hover:bg-brown-200 transition whitespace-nowrap">
                     ← Quay lại
                 </a>
             @endif
         </div>
     </div>
 
-    {{-- ================== CHI TIẾT SẢN PHẨM ================== --}}
-    @if(isset($selectedProduct))
-
-    <div class="max-w-6xl mx-auto bg-white rounded-3xl shadow-lg overflow-hidden">
-        <div class="flex flex-col md:flex-row">
-
-            {{-- IMAGE --}}
-            <div class="md:w-1/2">
-                <img src="{{ $selectedProduct->image ?? 'https://via.placeholder.com/800' }}"
-                     class="w-full h-full object-cover">
-            </div>
-
-            {{-- INFO --}}
-            <div class="md:w-1/2 p-8 flex flex-col justify-between">
-
-                <div>
-                    {{-- CATEGORY --}}
-                    @if($selectedProduct->category)
-                        <span class="text-sm text-brown-500 uppercase">
-                            {{ $selectedProduct->category }}
-                        </span>
-                    @endif
-
-                    {{-- NAME --}}
-                    <h1 class="text-3xl font-bold mt-2 text-brown-900">
-                        {{ $selectedProduct->name }}
-                    </h1>
-
-                    {{-- PRICE --}}
-                    <p class="text-2xl text-brown-600 font-semibold mt-3">
-                        {{ number_format($selectedProduct->price) }}₫
-                    </p>
-
-                    {{-- DESC --}}
-                    @if($selectedProduct->description)
-                        <p class="mt-6 text-brown-500 leading-relaxed">
-                            {{ $selectedProduct->description }}
-                        </p>
-                    @endif
-                </div>
-
-                {{-- ADD TO CART --}}
-                <form class="add-to-cart-form mt-8">
-                    @csrf
-                    <input type="hidden" name="product_id" value="{{ $selectedProduct->id }}">
-                    
-                    <button type="submit"
-                        class="w-full py-4 rounded-2xl bg-brown-600 text-white font-semibold hover:bg-brown-700 transition">
-                        Thêm vào giỏ
-                    </button>
-                </form>
-
-            </div>
-        </div>
-    </div>
-
-    {{-- ================== GRID SẢN PHẨM ================== --}}
-    @else
-
-    <div id="product-grid"
-         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-
-        @forelse($products as $product)
-
-        <div 
-            class="product-card block cursor-pointer"
-            data-price="{{ $product->price }}"
-            data-category="{{ $product->category }}"
-            data-id="{{ $product->id }}"
-            onclick="window.location.href='/products/{{ $product->id }}'"
-        >
-            <div class="bg-white rounded-2xl shadow-sm border border-brown-100 overflow-hidden hover:shadow-lg transition h-full">
-
-                {{-- IMAGE --}}
-                <div class="h-40 overflow-hidden relative">
-                    @if(in_array($product->id, $bestSellerIds ?? []))
-                        <span class="absolute top-2 left-2 z-10 bg-orange-500 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full shadow">
-                            Best Seller
-                        </span>
-                    @endif
-
-                    <img src="{{ $product->image ?? 'https://via.placeholder.com/300' }}"
-                        class="w-full h-full object-cover">
-                </div>
-
-                {{-- CONTENT --}}
-                <div class="p-4 flex items-center justify-between gap-3">
-
-                    {{-- NAME + PRICE --}}
-                    <div class="min-w-0 flex-1">
-                        <h3 class="font-semibold text-brown-900 truncate">
-                            {{ $product->name }}
-                        </h3>
-                        <p class="text-brown-600 font-medium mt-0.5">
-                            {{ number_format($product->price) }}₫
-                        </p>
+    {{-- SKELETON --}}
+    <div id="menu-skeleton">
+        @if(isset($selectedProduct))
+            <div class="max-w-6xl mx-auto bg-white rounded-3xl shadow-lg overflow-hidden">
+                <div class="flex flex-col md:flex-row">
+                    <div class="md:w-1/2">
+                        <div class="w-full h-[420px] skeleton"></div>
                     </div>
 
-                    {{-- ADD BUTTON --}}
-                    <form class="add-to-cart-form flex-shrink-0"
-                          onclick="event.stopPropagation()">
-                        @csrf
-                        <input type="hidden" name="product_id" value="{{ $product->id }}">
-                        
-                        <button type="submit"
-                            class="flex items-center justify-center w-10 h-10 rounded-xl bg-brown-600 text-white shadow-lg hover:scale-110 transition">
-                            +
-                        </button>
-                    </form>
+                    <div class="md:w-1/2 p-8">
+                        <div class="h-4 w-24 rounded skeleton mb-4"></div>
+                        <div class="h-8 w-2/3 rounded skeleton mb-4"></div>
+                        <div class="h-7 w-32 rounded skeleton mb-6"></div>
+                        <div class="space-y-3">
+                            <div class="h-4 w-full rounded skeleton"></div>
+                            <div class="h-4 w-5/6 rounded skeleton"></div>
+                            <div class="h-4 w-4/6 rounded skeleton"></div>
+                        </div>
+                        <div class="mt-10 h-14 w-full rounded-2xl skeleton"></div>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                @for($i = 0; $i < 10; $i++)
+                    <div class="bg-white rounded-2xl shadow-sm border border-brown-100 overflow-hidden">
+                        <div class="h-40 skeleton"></div>
+                        <div class="p-4 flex items-center justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="h-4 w-3/4 rounded skeleton mb-2"></div>
+                                <div class="h-4 w-1/2 rounded skeleton"></div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl skeleton"></div>
+                        </div>
+                    </div>
+                @endfor
+            </div>
+        @endif
+    </div>
+
+
+        <div id="product-grid"
+             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+
+            @forelse($products as $product)
+
+            <div 
+                class="product-card block cursor-pointer"
+                data-price="{{ $product->price }}"
+                data-category="{{ is_object($product->category) ? $product->category->slug : $product->category }}"
+                data-id="{{ $product->id }}"
+                onclick="window.location.href='/products/{{ $product->id }}'"
+            >
+                <div class="bg-white rounded-2xl shadow-sm border border-brown-100 overflow-hidden hover:shadow-lg transition h-full">
+
+                    {{-- IMAGE --}}
+                    <div class="h-40 overflow-hidden relative">
+                        @if(in_array($product->id, $bestSellerIds ?? []))
+                            <span class="absolute top-2 left-2 z-10 bg-orange-500 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full shadow">
+                                Best Seller
+                            </span>
+                        @endif
+
+                        <img src="{{ $product->image_url ?? 'https://via.placeholder.com/300' }}"
+                            class="w-full h-full object-cover">
+                    </div>
+
+                    {{-- CONTENT --}}
+                    <div class="p-4 flex items-center justify-between gap-3">
+
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-semibold text-brown-900 truncate">
+                                {{ $product->name }}
+                            </h3>
+                            <p class="text-brown-600 font-medium mt-0.5">
+                                {{ number_format($product->price) }}₫
+                            </p>
+                        </div>
+
+                        <form class="add-to-cart-form flex-shrink-0"
+                              onclick="event.stopPropagation()">
+                            @csrf
+                            <input type="hidden" name="product_id" value="{{ $product->id }}">
+                            
+                            <button type="submit"
+                                class="flex items-center justify-center w-10 h-10 rounded-xl bg-brown-600 text-white shadow-lg hover:scale-110 transition">
+                                +
+                            </button>
+                        </form>
+
+                    </div>
 
                 </div>
-
             </div>
+
+            @empty
+                <div class="col-span-full text-center py-20 text-brown-400">
+                    Không có sản phẩm
+                </div>
+            @endforelse
+
         </div>
 
-        @empty
-            <div class="col-span-full text-center py-20 text-brown-400">
-                Không có sản phẩm
+        @if(method_exists($products, 'hasPages') && $products->hasPages())
+            <div id="pagination" class="flex justify-center mt-8 gap-2 flex-wrap">
+                @if ($products->onFirstPage())
+                    <span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg">←</span>
+                @else
+                    <a href="{{ $products->previousPageUrl() }}"
+                       class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
+                        ←
+                    </a>
+                @endif
+
+                @foreach ($products->getUrlRange(1, $products->lastPage()) as $page => $url)
+                    @if ($page == $products->currentPage())
+                        <span class="px-3 py-2 bg-brown-600 text-white rounded-lg">{{ $page }}</span>
+                    @else
+                        <a href="{{ $url }}"
+                           class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
+                            {{ $page }}
+                        </a>
+                    @endif
+                @endforeach
+
+                @if ($products->hasMorePages())
+                    <a href="{{ $products->nextPageUrl() }}"
+                       class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
+                        →
+                    </a>
+                @else
+                    <span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg">→</span>
+                @endif
             </div>
-        @endforelse
-
-    </div>
-    @if(method_exists($products, 'hasPages') && $products->hasPages())
-    <div id="pagination" class="flex justify-center mt-8 gap-2 flex-wrap">
-        @if ($products->onFirstPage())
-            <span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg">←</span>
-        @else
-            <a href="{{ $products->previousPageUrl() }}"
-               class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
-                ←
-            </a>
         @endif
 
-        @foreach ($products->getUrlRange(1, $products->lastPage()) as $page => $url)
-            @if ($page == $products->currentPage())
-                <span class="px-3 py-2 bg-brown-600 text-white rounded-lg">{{ $page }}</span>
-            @else
-                <a href="{{ $url }}"
-                   class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
-                    {{ $page }}
-                </a>
-            @endif
-        @endforeach
-
-        @if ($products->hasMorePages())
-            <a href="{{ $products->nextPageUrl() }}"
-               class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
-                →
-            </a>
-        @else
-            <span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg">→</span>
-        @endif
     </div>
-@endif
-
-    @endif
 
 </section>
+
+@push('scripts')
+<script>
+    window.addEventListener('load', function () {
+        const skeleton = document.getElementById('menu-skeleton');
+        const realContent = document.getElementById('menu-real-content');
+
+        if (skeleton) {
+            skeleton.classList.add('hidden');
+        }
+
+        if (realContent) {
+            realContent.classList.remove('hidden');
+        }
+    });
+</script>
+@endpush

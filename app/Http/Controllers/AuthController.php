@@ -25,15 +25,16 @@ class AuthController extends Controller
         ]);
 
         // 2. TẠO USER - TRUYỀN ĐẦY ĐỦ DỮ LIỆU
-        // Lỗi của bạn là do thiếu dòng 'username' => $request->username
         $user = User::create([
-            'username' => $request->username,  // <-- Dòng này cực kỳ quan trọng
+            'username' => $request->username,  
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
 
         // 3. Đăng nhập luôn
         Auth::login($user);
+        $request->session()->regenerate();
+        $request->session()->forget('admin_mode');
 
         return redirect()->route('home')->with('success', 'Đăng ký thành công!');
     }
@@ -58,6 +59,7 @@ class AuthController extends Controller
         
         if (Auth::attempt([$loginField => $request->login, 'password' => $request->password])) {
             $request->session()->regenerate();
+            $request->session()->forget('admin_mode');
             return redirect()->intended(route('home'));
         }
 
@@ -66,9 +68,15 @@ class AuthController extends Controller
         ])->onlyInput('login');
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
+        $request->session()->forget('admin_mode');
+
         Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 

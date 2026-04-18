@@ -167,80 +167,24 @@
     </div>
 
     <!-- SCRIPT HIỂN THỊ TOAST -->
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // Hàm hiển thị Toast
-            window.showToast = function(message, type = 'success') {
-                type = type || 'success';
-                var container = document.getElementById('toast-container');
-                if (!container) return;
+<script>
+document.addEventListener("DOMContentLoaded", function() {
 
-                // Cấu hình màu và icon theo loại
-                var configs = {
-                    success: {
-                        icon: 'lucide:check-circle',
-                        colorClass: 'text-green-500',
-                        borderClass: 'border-green-100',
-                        bgClass: 'bg-white'
-                    },
-                    error: {
-                        icon: 'lucide:alert-circle',
-                        colorClass: 'text-red-500',
-                        borderClass: 'border-red-100',
-                        bgClass: 'bg-white'
-                    },
-                    info: {
-                        icon: 'lucide:info',
-                        colorClass: 'text-blue-500',
-                        borderClass: 'border-blue-100',
-                        bgClass: 'bg-white'
-                    }
-                };
+    @if(session('success'))
+        showToast("{{ session('success') }}", 'success');
+    @endif
+    
+    @if(session('error'))
+        showToast("{{ session('error') }}", 'error');
+    @endif
 
-                var config = configs[type] || configs.info;
+    @if ($errors->any())
+        @foreach ($errors->all() as $error)
+            showToast("{{ $error }}", 'error');
+        @endforeach
+    @endif
 
-                // Tạo phần tử Toast
-                var toast = document.createElement('div');
-                toast.className = 'toast pointer-events-auto flex items-center gap-3 p-4 rounded-2xl shadow-2xl border transform transition-all duration-300 translate-x-full opacity-0 ' + config.borderClass + ' ' + config.bgClass + ' min-w-[300px] max-w-sm';
-                toast.innerHTML = 
-                    '<div class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full ' + (type === 'success' ? 'bg-green-100' : 'bg-red-100') + '">' +
-                        '<span class="iconify ' + config.colorClass + ' text-lg" data-icon="' + config.icon + '"></span>' +
-                    '</div>' +
-                    '<div class="flex-1 text-sm font-medium text-gray-800">' + message + '</div>' +
-                    '<button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600">' +
-                        '<span class="iconify" data-icon="lucide:x"></span>' +
-                    '</button>';
-
-                container.appendChild(toast);
-
-                // Animation: Trượt vào
-                requestAnimationFrame(() => {
-                    toast.classList.remove('translate-x-full', 'opacity-0');
-                });
-
-                // Tự động ẩn sau 3 giây
-                setTimeout(function() {
-                    toast.classList.add('translate-x-full', 'opacity-0');
-                    setTimeout(function() { toast.remove(); }, 300);
-                }, 3000);
-            };
-
-            // Kiểm tra session từ Laravel để hiển thị Toast ngay khi load trang
-            @if(session('success'))
-                window.showToast('{{ session('success') }}', 'success');
-            @endif
-            
-            @if(session('error'))
-                window.showToast('{{ session('error') }}', 'error');
-            @endif
-
-            // Hiển thị lỗi validate (nếu có)
-            @if ($errors->any())
-                @foreach ($errors->all() as $error)
-                    window.showToast('{{ $error }}', 'error');
-                @endforeach
-            @endif
-        });
-    </script>
+});
+</script>
 </body>
 </html>

@@ -6,12 +6,16 @@
 const API_URL = '/products';
 let deleteTargetId = null;
 let manageProducts = [];
+let filteredProducts = [];
+
+let currentPage = 1;
+const perPage = 10;
 
 // =====================
 // Category labels
 // =====================
 const catLabels = {
-    "mon-anh-nhau": 'Món ăn nhậu',
+    "mon-an-nhau": 'Món ăn nhậu',
     "mon-an-kem": 'Món ăn kèm',
     "mon-an-chinh": 'Món ăn chính',
     "nuoc-giai-khat": 'Nước giải khát',
@@ -21,44 +25,114 @@ const catLabels = {
 // Load Products
 // =====================
 async function loadProducts() {
-    const loading = $('#table-loading');
-    const empty   = $('#table-empty');
-    const tbody   = $('#manage-table-body');
+    const empty = document.getElementById('table-empty');
+    const tbody = document.getElementById('manage-table-body');
+    const skeleton = document.getElementById('manage-skeleton');
+    const realContent = document.getElementById('manage-real-content');
 
-    loading.classList.remove('hidden');
-    empty.classList.add('hidden');
-    empty.classList.remove('flex');
+    if (skeleton) skeleton.classList.remove('hidden');
+    if (realContent) realContent.classList.add('hidden');
+
+    if (empty) {
+        empty.classList.add('hidden');
+        empty.classList.remove('flex');
+    }
+
     if (tbody) tbody.innerHTML = '';
 
     try {
-        const res = await fetch(API_URL);
+        const res = await fetch('/products');
         const json = await res.json();
+
         manageProducts = json.data || [];
+        filteredProducts = [...manageProducts];
+        currentPage = 1;
 
-        loading.classList.add('hidden');
+        if (skeleton) skeleton.classList.add('hidden');
+        if (realContent) realContent.classList.remove('hidden');
 
-        if (manageProducts.length === 0) {
-            empty.classList.remove('hidden');
-            empty.classList.add('flex');
-        } else {
-            renderTable();
-        }
-
-        updateStats();
+        renderTable(filteredProducts);
+        updateStats(filteredProducts);
     } catch (err) {
-        loading.classList.add('hidden');
-        showToast('Lỗi tải dữ liệu: ' + err.message, 'error');
+        console.error(err);
+
+        if (skeleton) skeleton.classList.add('hidden');
+        if (realContent) realContent.classList.remove('hidden');
+
+        if (tbody) {
+            tbody.innerHTML = `
+                <div class="py-10 text-center text-red-500">
+                    Không tải được dữ liệu sản phẩm
+                </div>
+            `;
+        }
     }
+}
+
+// =====================
+// Update Stats
+// =====================
+function updateStats(products = manageProducts) {
+    const total = products.length;
+
+    const active = products.filter(p => Number(p.is_active) === 1).length;
+
+    const categories = new Set(
+        products.map(p => p.category?.id || p.category_id).filter(Boolean)
+    ).size;
+
+    const avg = total > 0
+        ? Math.round(products.reduce((sum, p) => sum + Number(p.price || 0), 0) / total)
+        : 0;
+
+    const statTotal = document.getElementById('stat-total');
+    const statActive = document.getElementById('stat-active');
+    const statCategories = document.getElementById('stat-categories');
+    const statAvgPrice = document.getElementById('stat-avg-price');
+
+    if (statTotal) statTotal.textContent = total;
+    if (statActive) statActive.textContent = active;
+    if (statCategories) statCategories.textContent = categories;
+    if (statAvgPrice) statAvgPrice.textContent = formatPrice(avg);
 }
 
 // =====================
 // Render Table
 // =====================
-function renderTable() {
+function renderTable(products = manageProducts) {
     const tbody = $('#manage-table-body');
+    const empty = $('#table-empty');
+    const pagination = $('#manage-pagination');
+
     if (!tbody) return;
 
-    tbody.innerHTML = manageProducts.map((p, i) => {
+    tbody.innerHTML = '';
+
+    if (!products || products.length === 0) {
+        if (empty) {
+            empty.classList.remove('hidden');
+            empty.classList.add('flex');
+        }
+        if (pagination) pagination.innerHTML = '';
+        return;
+    }
+
+    if (empty) {
+        empty.classList.add('hidden');
+        empty.classList.remove('flex');
+    }
+
+    const totalPages = Math.ceil(products.length / perPage);
+
+    if (currentPage > totalPages) {
+        currentPage = totalPages || 1;
+    }
+
+    const start = (currentPage - 1) * perPage;
+    const end = start + perPage;
+    const paginatedProducts = products.slice(start, end);
+
+    tbody.innerHTML = paginatedProducts.map((p, i) => {
         let imageSrc = 'https://picsum.photos/seed/default/80/80.jpg';
 
         if (p.image) {
@@ -71,7 +145,7 @@ function renderTable() {
 
         return `
             <div class="table-row grid grid-cols-12 gap-4 px-5 py-4 border-b border-brown-50 items-center animate-fade-in-up" style="animation-delay: ${i * 30}ms">
-                <div class="col-span-1 text-sm text-brown-400 font-medium">${p.id}</div>
+                <div class="col-span-1 text-sm text-brown-400 font-medium">${start + i + 1}</div>
                 <div class="col-span-3 flex items-center gap-3 min-w-0">
                     <img src="${imageSrc}" alt="${p.name}"
                          class="w-11 h-11 rounded-xl object-cover shrink-0 bg-brown-50 border border-brown-100">
@@ -81,7 +155,7 @@ function renderTable() {
                     </div>
                 </div>
                 <div class="col-span-2">
-                    <span class="badge-cat inline-flex px-2.5 py-1 rounded-lg text-xs font-medium">${catLabels[p.category] || 'Khác'}</span>
+                    <span class="badge-cat inline-flex px-2.5 py-1 rounded-lg text-xs font-medium">${p.category?.name || 'Khác'}</span>
                 </div>
                 <div class="col-span-2 text-sm font-bold text-brown-800">${formatPrice(p.price)}</div>
                 <div class="col-span-2">
@@ -103,32 +177,144 @@ function renderTable() {
             </div>
         `;
     }).join('');
+
+    renderPagination(products);
+}
+
+function renderPagination(products = filteredProducts) {
+    const pagination = $('#manage-pagination');
+    if (!pagination) return;
+
+    const totalPages = Math.ceil(products.length / perPage);
+
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    if (currentPage === 1) {
+        html += `<span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg">←</span>`;
+    } else {
+        html += `
+            <button onclick="goToPage(${currentPage - 1})"
+                    class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
+                ←
+            </button>
+        `;
+    }
+
+    for (let page = 1; page <= totalPages; page++) {
+        if (page === currentPage) {
+            html += `<span class="px-3 py-2 bg-brown-600 text-white rounded-lg">${page}</span>`;
+        } else {
+            html += `
+                <button onclick="goToPage(${page})"
+                        class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
+                    ${page}
+                </button>
+            `;
+        }
+    }
+
+    if (currentPage === totalPages) {
+        html += `<span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg">→</span>`;
+    } else {
+        html += `
+            <button onclick="goToPage(${currentPage + 1})"
+                    class="px-3 py-2 bg-white border border-brown-200 text-brown-700 rounded-lg hover:bg-brown-50">
+                →
+            </button>
+        `;
+    }
+
+    pagination.innerHTML = html;
+}
+
+function goToPage(page) {
+    const totalPages = Math.ceil(filteredProducts.length / perPage);
+
+    if (page < 1 || page > totalPages) return;
+
+    currentPage = page;
+    renderTable(filteredProducts);
+
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
 }
 
 // =====================
 // Update Stats
 // =====================
-function updateStats() {
-    const total = manageProducts.length;
-    const active = manageProducts.filter(p => p.is_active).length;
-    const cats = new Set(manageProducts.map(p => p.category)).size;
-    const avg = total > 0 ? Math.round(manageProducts.reduce((s, p) => s + p.price, 0) / total) : 0;
+function filterManageProducts(keyword = '') {
+    const q = keyword.trim().toLowerCase();
 
-    const elTotal = $('#stat-total');
-    const elActive = $('#stat-active');
-    const elCats = $('#stat-categories');
-    const elAvg = $('#stat-avg-price');
+    if (!q) {
+        filteredProducts = [...manageProducts];
+    } else {
+        filteredProducts = manageProducts.filter(product => {
+            const name = (product.name || '').toLowerCase();
+            const description = (product.description || '').toLowerCase();
+            const category = (product.category?.name || '').toLowerCase();
+            const price = String(product.price || '');
 
-    if (elTotal) elTotal.textContent = total;
-    if (elActive) elActive.textContent = active;
-    if (elCats) elCats.textContent = cats;
-    if (elAvg) elAvg.textContent = formatPrice(avg);
+            return (
+                name.includes(q) ||
+                description.includes(q) ||
+                category.includes(q) ||
+                price.includes(q)
+            );
+        });
+    }
+    currentPage = 1;
+    renderTable(filteredProducts);
+    updateStats(filteredProducts);
+}
+
+function initManageSearch() {
+    const input = document.getElementById('manage-search-input');
+    if (!input) return;
+
+    input.addEventListener('input', function () {
+        filterManageProducts(this.value);
+    });
 }
 
 // =====================
 // Modal: Open/Close
 // =====================
+function loadCategoriesForDropdown(selectedId = '') {
+    console.log('CALL API CATEGORY');
+    fetch('/api/categories')
+        .then(res => res.json())
+        .then(data => {
+            const select = document.getElementById('form-category');
+            if (!select || !data.data) return;
+
+            // reset select (KHÔNG dùng selected)
+            let html = `<option value="">Chọn danh mục</option>`;
+
+            data.data.forEach(cat => {
+                html += `
+                    <option value="${cat.id}" ${String(selectedId) === String(cat.id) ? 'selected' : ''}>
+                        ${cat.name}
+                    </option>
+                `;
+            });
+
+            select.innerHTML = html;
+        })
+        .catch(err => {console.error(err);
+        showToast('Lỗi kết nối server', 'error');
+    });
+}
+
+
 function openModal(product = null) {
+    loadCategoriesForDropdown(product ? product.category_id : '');
     const modal = $('#product-modal');
     const title = $('#modal-title');
     const btn = $('#form-submit-btn');
@@ -147,7 +333,7 @@ function openModal(product = null) {
         $('#form-price').value = product.price;
         $('#form-desc').value = product.description || '';
         $('#form-image').value = product.image || '';
-        $('#form-category').value = product.category || 'mon-chinh';
+        $('#form-category').value = product.category_id || '';
         $('#form-status').value = product.is_active ? '1' : '0';
 
         if (product.image) {
@@ -209,8 +395,31 @@ async function submitProduct(e) {
     formData.append('name', name);
     formData.append('price', $('#form-price').value);
     formData.append('description', $('#form-desc').value.trim());
-    formData.append('image', $('#form-image').value.trim());
-    formData.append('category', $('#form-category').value);
+    const imageValue = $('#form-image').value.trim();
+
+    if (imageValue) {
+        const isHttpUrl = imageValue.startsWith('http://') || imageValue.startsWith('https://');
+        const isGoogleUrl = imageValue.includes('google.com') || imageValue.includes('gstatic.com');
+        const isBase64 = imageValue.startsWith('data:image/');
+
+        if (isBase64) {
+            showToast('Không dùng chuỗi base64 cho ô URL hình ảnh', 'error');
+            return;
+        }
+
+        if (!isHttpUrl) {
+            showToast('URL hình ảnh không hợp lệ', 'error');
+            return;
+        }
+
+        if (isGoogleUrl) {
+            showToast('Không nên dùng link ảnh sao chép từ Google, hãy dùng link ảnh trực tiếp', 'error');
+            return;
+        }
+
+        formData.append('image', imageValue);
+    }
+    formData.append('category_id', $('#form-category').value);
     formData.append('is_active', $('#form-status').value);
 
     const fileInput = $('#form-file');
@@ -307,23 +516,26 @@ async function confirmDelete() {
 // Image Preview
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
-    const imgInput = $('#form-image');
-    if (imgInput) {
-        imgInput.addEventListener('input', (e) => {
-            const url = e.target.value.trim();
-            const previewBox = $('#img-preview-box');
-            const preview = $('#img-preview');
+    const fileInput = $('#form-file');
 
-            if (url) {
-                preview.src = url;
-                previewBox.classList.remove('hidden');
-                preview.onerror = () => previewBox.classList.add('hidden');
-            } else {
-                previewBox.classList.add('hidden');
-            }
-        });
-    }
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                // ❗ QUAN TRỌNG: xóa URL cũ (tránh base64)
+                $('#form-image').value = '';
+
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    $('#img-preview').src = ev.target.result;
+                    $('#img-preview-box').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            });
+        }
 
     // Load products on init
     loadProducts();
+    initManageSearch();
 });

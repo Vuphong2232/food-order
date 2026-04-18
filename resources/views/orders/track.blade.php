@@ -59,6 +59,39 @@
             </div>
         </div>
 
+    <div class="bg-white rounded-xl border border-brown-100 shadow-sm overflow-hidden mb-6">
+        <div class="px-4 py-3 bg-[#f7f1ea] border-b border-brown-100">
+            <h4 class="text-sm font-bold text-[#7a4e2d] uppercase">Danh sách món</h4>
+        </div>
+
+        <div class="divide-y divide-[#e8d9c9]">
+            @forelse($order->items as $item)
+                @php
+                    $price = $item->price ?? 0;
+                    $subtotal = $price * $item->quantity;
+                @endphp
+
+                <div class="grid grid-cols-3 items-center px-5 py-4 bg-[#fcfcfc]">
+                    <div class="text-lg text-[#4b2e1f] pr-4 truncate">
+                        {{ $item->product->name ?? $item->name ?? 'Sản phẩm' }}
+                    </div>
+
+                    <div class="text-center text-lg text-[#8b5e3c] border-l border-r border-[#e8d9c9]">
+                        SL: x{{ $item->quantity }}
+                    </div>
+
+                    <div class="text-right text-lg text-[#4b2e1f] pl-4">
+                        {{ number_format($subtotal, 0, ',', '.') }}đ
+                    </div>
+                </div>
+            @empty
+                <div class="px-5 py-6 text-center text-sm text-brown-400">
+                    Chưa có món ăn nào
+                </div>
+            @endforelse
+        </div>
+    </div> 
+
         <div class="rounded-2xl border border-brown-100 bg-white p-5">
             <h3 class="text-base font-bold text-brown-900 mb-5">Quy trình xử lý đơn hàng</h3>
 

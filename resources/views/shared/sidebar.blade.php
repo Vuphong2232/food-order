@@ -17,19 +17,25 @@
 
         @if($isAdminMode)
             <a href="{{ route('manage') }}"
-               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('manage') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
+            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('manage') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
                 <span class="iconify text-lg" data-icon="lucide:settings-2"></span>
                 Quản lý sản phẩm
             </a>
 
+            <a href="{{ route('admin.categories') }}"
+            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.categories') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
+                <span class="iconify text-lg" data-icon="lucide:layers"></span>
+                Quản lý danh mục
+            </a>
+
             <a href="{{ route('orders.history') }}"
-               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('orders.history') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
+            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('orders.history') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
                 <span class="iconify text-lg" data-icon="lucide:clipboard-list"></span>
                 Lịch sử mua hàng
             </a>
 
             <a href="{{ route('admin.report') }}"
-               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-brown-300 hover:bg-brown-800 hover:text-white">
+            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.report') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
                 <span class="iconify text-lg" data-icon="lucide:bar-chart-3"></span>
                 Thống kê
             </a>
@@ -45,7 +51,7 @@
             </div>
 
             <a href="{{ route('admin.mode.off') }}"
-               class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-brown-300 hover:bg-brown-800 hover:text-white">
+            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-brown-300 hover:bg-brown-800 hover:text-white">
                 <span class="iconify text-lg" data-icon="lucide:house"></span>
                 Quay về giao diện chính
             </a>
@@ -60,6 +66,12 @@
                class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('orders.history') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
                 <span class="iconify text-lg" data-icon="lucide:clipboard-list"></span>
                 Lịch sử mua hàng
+            </a>
+
+            <a href="{{ route('user.notifications') }}"
+            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('user.notifications') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
+                <span class="iconify text-lg" data-icon="lucide:bell"></span>
+                Thông báo
             </a>
 
             @auth

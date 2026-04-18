@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\OrderItem;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +20,7 @@ class HomeController extends Controller
                 'products.name',
                 'products.image',
                 'products.price',
-                'products.category',
+                'products.category_id',
                 DB::raw('SUM(order_items.quantity) as sold_count')
             )
             ->join('products', 'order_items.product_id', '=', 'products.id')
@@ -30,21 +31,30 @@ class HomeController extends Controller
                 'products.name',
                 'products.image',
                 'products.price',
-                'products.category'
+                'products.category_id'
             )
             ->orderByDesc('sold_count')
-            ->take(10)
+            ->take(3)
             ->get();
 
         $bestSellerIds = $bestSellerProducts->pluck('id')->toArray();
 
-        $query = Product::where('is_active', true)->orderBy('id');
+        $categories = Category::where('is_active', true)
+            ->orderBy('id')
+            ->get();
+
+        $query = Product::with('category')
+            ->where('is_active', true)
+            ->orderBy('id');
 
         if ($category && $category !== 'all') {
             if ($category === 'best-seller') {
                 $query->whereIn('id', $bestSellerIds);
             } else {
-                $query->where('category', $category);
+                $query->whereHas('category', function ($q) use ($category) {
+                    $q->where('slug', $category)
+                      ->where('is_active', true);
+                });
             }
         }
 
@@ -66,6 +76,7 @@ class HomeController extends Controller
             'products',
             'bestSellerProducts',
             'bestSellerIds',
+            'categories',
             'category',
             'price'
         ));

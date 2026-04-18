@@ -6,7 +6,9 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AdminNotificationController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CategoryController;
 
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -41,8 +43,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::put('/products/{product}', [ProductController::class, 'update']);
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
-    Route::get('/products/{product}', [ProductController::class, 'show'])->name('product.show');
-    Route::get('/products/{product}', [ProductController::class, 'detail']);
+    Route::get('/products/{product}', [ProductController::class, 'detail'])->name('product.show');
+
+    // Route hiển thị trang quản lý danh mục
+    Route::get('/admin/danh-muc', [CategoryController::class, 'index'])->name('admin.categories');
+
+    // Route API CRUD danh mục
+    Route::get('/api/categories', [CategoryController::class, 'getCategories']);
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::put('/categories/{category}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
     Route::get('/gio-hang', [CartController::class, 'index'])->name('cart.index');
     Route::post('/them-vao-gio', [CartController::class, 'store'])->name('cart.store');
@@ -59,11 +69,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/cam-on', [OrderController::class, 'thankyou'])->name('thankyou');
 
     Route::get('/lich-su-mua-hang', [OrderController::class, 'history'])->name('orders.history');
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
     Route::get('/api/orders/{id}', [OrderController::class, 'getDetailApi']);
     Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
     Route::get('/don-hang/{id}/theo-doi', [OrderController::class, 'track'])->name('orders.track');
     Route::get('/don-hang/{id}/xuat-hoa-don', [OrderController::class, 'exportInvoice'])->name('orders.export');
     Route::post('/orders/{id}/update-process', [OrderController::class, 'updateProcess'])->name('orders.updateProcess')->middleware(['auth']);
+    Route::get('/orders/{order}/review-sp/{product}', [ReviewController::class, 'createReviewSp'])->name('orders.review_sp');
+    Route::get('/orders/review/{order}/{product}', [ReviewController::class, 'createReview'])->name('orders.review');
+
 
     Route::get('/admin/thong-ke', [OrderController::class, 'adminReport'])->name('admin.report');
     Route::get('/admin/notifications', [OrderController::class, 'adminNotifications'])->name('admin.notifications');
