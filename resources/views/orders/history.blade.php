@@ -187,15 +187,7 @@
                                         <span class="iconify text-sm" data-icon="lucide:package-search"></span>
                                         Theo dõi
                                     </button>
-                                    
-                                <!-- @if($order->items->count() > 0)
-                                    <button type="button"
-                                            onclick="event.stopPropagation(); openReviewModal({{ $order->id }}, {{ $order->items->first()->product_id }})"
-                                            class="px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-xs font-semibold hover:bg-yellow-100 hover:border-yellow-300 transition-colors flex items-center gap-1.5">
-                                            <span class="iconify text-sm" data-icon="lucide:star"></span>
-                                        Đánh giá
-                                    </button>
-                                @endif                             -->
+
                                 @if($order->items->count() > 0 &&
                                     (
                                         $order->status === 'completed' ||

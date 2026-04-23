@@ -28,6 +28,7 @@
                     @php
                         $price = $item->price ?? 0;
                         $subtotal = $price * $item->quantity;
+                        $isReviewed = in_array($item->product_id, $reviewedProductIds ?? []);
                     @endphp
 
                     <div class="px-5 py-4 bg-[#fcfcfc]">
@@ -45,12 +46,21 @@
                             </div>
 
                             <div class="flex justify-end">
+                               @if(!$isReviewed)
                                 <button type="button"
+                                        data-review-btn="true"
+                                        data-product-id="{{ $item->product_id }}"
                                         onclick="openReviewModal({{ $order->id }}, {{ $item->product_id }})"
                                         class="px-3 py-2 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-sm font-semibold hover:bg-yellow-100 hover:border-yellow-300 transition-colors flex items-center gap-2">
                                     <span class="iconify text-sm" data-icon="lucide:star"></span>
                                     Đánh giá
                                 </button>
+                            @else
+                                <span class="px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+                                    <span class="iconify text-sm" data-icon="lucide:check"></span>
+                                    Đã đánh giá
+                                </span>
+                            @endif
                             </div>
                         </div>
                     </div>

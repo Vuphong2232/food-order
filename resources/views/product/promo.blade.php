@@ -1,4 +1,4 @@
-<section class="px-8 pb-8">
+<section class="px-8 pb-8 lg:ml-[250px]">
     <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brown-800 to-brown-600 p-8 md:p-10">
         <div class="absolute top-0 right-0 w-80 h-80 bg-brown-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
         <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">

@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
+use App\Mail\ForgotPasswordOtpMail;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
+
 class AuthController extends Controller
 {
     // --- ĐĂNG KÝ ---
@@ -81,17 +86,145 @@ class AuthController extends Controller
     }
 
     // --- QUÊN MẬT KHẨU ---
-    public function showForgotPassword()
-    {
-        return view('auth.forgot-password');
+    // --- QUÊN MẬT KHẨU ---
+public function showForgotPassword()
+{
+    return view('auth.forgot-password');
+}
+
+public function forgotPassword(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email'
+    ]);
+
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user) {
+        return back()->withErrors([
+            'email' => 'Email không tồn tại trong hệ thống'
+        ])->withInput();
     }
 
-    public function forgotPassword(Request $request)
-    {
-        $request->validate(['email' => 'required|email']);
-        // Demo logic
-        return back()->with('success', 'Liên kết đặt lại mật khẩu đã được gửi (Demo).');
+    $code = (string) random_int(100000, 999999);
+
+    DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+    DB::table('password_reset_tokens')->insert([
+        'email' => $request->email,
+        'code' => $code,
+        'expires_at' => Carbon::now()->addMinutes(10),
+        'is_used' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    Mail::to($request->email)->send(new ForgotPasswordOtpMail($code, $request->email));
+
+    session([
+        'password_reset_email' => $request->email
+    ]);
+
+    return redirect()->route('password.verify.form')
+        ->with('success', 'Mã xác nhận đã được gửi về email của bạn.');
+}
+
+public function showVerifyCodeForm()
+{
+    if (!session('password_reset_email')) {
+        return redirect()->route('password.request');
     }
+
+    return view('auth.verify-code');
+}
+
+public function verifyCode(Request $request)
+{
+    $request->validate([
+        'code' => 'required|digits:6'
+    ]);
+
+    $email = session('password_reset_email');
+
+    if (!$email) {
+        return redirect()->route('password.request')
+            ->withErrors(['email' => 'Phiên đặt lại mật khẩu đã hết.']);
+    }
+
+    $otp = DB::table('password_reset_tokens')
+        ->where('email', $email)
+        ->where('code', $request->code)
+        ->where('is_used', false)
+        ->first();
+
+    if (!$otp) {
+        return back()->withErrors([
+            'code' => 'Mã xác nhận không đúng'
+        ])->withInput();
+    }
+
+    if (Carbon::parse($otp->expires_at)->isPast()) {
+        return back()->withErrors([
+            'code' => 'Mã xác nhận đã hết hạn'
+        ]);
+    }
+
+    session([
+        'password_reset_verified' => true
+    ]);
+
+    return redirect()->route('password.reset.form')
+        ->with('success', 'Xác nhận mã thành công. Vui lòng nhập mật khẩu mới.');
+}
+
+public function showResetPasswordForm()
+{
+    if (!session('password_reset_email') || !session('password_reset_verified')) {
+        return redirect()->route('password.request');
+    }
+
+    return view('auth.reset-password');
+}
+
+public function resetPassword(Request $request)
+{
+    $request->validate([
+        'password' => 'required|string|min:6|confirmed',
+    ]);
+
+    $email = session('password_reset_email');
+
+    if (!$email || !session('password_reset_verified')) {
+        return redirect()->route('password.request')
+            ->withErrors(['email' => 'Phiên đặt lại mật khẩu không hợp lệ.']);
+    }
+
+    $user = User::where('email', $email)->first();
+
+    if (!$user) {
+        return redirect()->route('password.request')
+            ->withErrors(['email' => 'Không tìm thấy tài khoản.']);
+    }
+
+    $user->update([
+        'password' => Hash::make($request->password)
+    ]);
+
+    DB::table('password_reset_tokens')
+        ->where('email', $email)
+        ->update([
+            'is_used' => true,
+            'updated_at' => now()
+        ]);
+
+    session()->forget([
+        'password_reset_email',
+        'password_reset_verified'
+    ]);
+
+    return redirect()->route('login')
+        ->with('success', 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.');
+}
 
     public function profileInfo()
 {

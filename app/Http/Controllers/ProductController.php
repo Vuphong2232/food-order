@@ -109,22 +109,20 @@ class ProductController extends Controller
     ]);
 }
 
-public function show(Product $product)
+public function show($id)
 {
-    $products = Product::all();
-
-    $product->load([
+    $product = Product::with([
         'reviews' => function ($query) {
             $query->latest();
         },
         'reviews.user'
-    ]);
+    ])->findOrFail($id);
 
-    return view('home', [
-        'products' => $products,
+    return view('product.show', [
         'selectedProduct' => $product
     ]);
 }
+
 
 public function detail(Product $product)
 {

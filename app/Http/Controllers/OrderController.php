@@ -6,6 +6,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
 use App\Models\CartItem; 
+use App\Models\Category;
+use App\Models\Coupon;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,17 +15,57 @@ use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
-    /**
-     * Hiển thị form đặt hàng (trang hiện tại của bạn)
-     */
     public function index()
     {
-        return view('checkout');
+        $cartItems = CartItem::with('product.reviews.user')
+            ->where('user_id', Auth::id())
+            ->get();
+
+        $subtotal = $cartItems->sum(function ($item) {
+            return ($item->product->price ?? 0) * $item->quantity;
+        });
+
+        return view('partials.checkout', compact('cartItems', 'subtotal'));
     }
 
-    /**
-     * Xử lý đặt hàng
-     */
+    public function checkCoupon(Request $request)
+{
+    $request->validate([
+        'code' => 'required|string'
+    ]);
+
+    $cartItems = CartItem::with('product')
+        ->where('user_id', Auth::id())
+        ->get();
+
+    $subtotal = $cartItems->sum(function ($item) {
+        return ($item->product->price ?? 0) * $item->quantity;
+    });
+
+    $coupon = Coupon::whereRaw('UPPER(code) = ?', [strtoupper($request->code)])
+        ->where('is_active', 1)
+        ->first();
+
+    if (!$coupon) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Mã giảm giá không hợp lệ',
+        ]);
+    }
+
+    $discountAmount = $subtotal * ($coupon->discount_percent / 100);
+    $total = $subtotal - $discountAmount;
+
+    return response()->json([
+        'success' => true,
+        'code' => $coupon->code,
+        'discount_percent' => $coupon->discount_percent,
+        'subtotal' => $subtotal,
+        'discount_amount' => $discountAmount,
+        'total' => $total,
+    ]);
+}
+
     public function store(Request $request)
 {
     $validated = $request->validate([
@@ -53,14 +95,35 @@ class OrderController extends Controller
         ], 400);
     }
 
-    $totalAmount = 0;
+    // --- BẮT ĐẦU SỬA: TÍNH TOÁN $subtotal ---
+    $subtotal = 0;
     foreach ($cartItems as $item) {
         if ($item->product) {
-            $totalAmount += $item->product->price * $item->quantity;
+            $subtotal += $item->product->price * $item->quantity;
+        }
+    }
+    // --- KẾT THÚC SỬA ---
+
+    $orderCode = 'DH-' . strtoupper(uniqid());
+
+    // --- SỬA LOGIC GIẢM GIÁ ---
+    $couponCode = strtoupper(trim($request->coupon_code ?? ''));
+    $discountPercent = 0;
+    $discountAmount = 0;
+
+    if ($couponCode !== '') {
+        $coupon = Coupon::whereRaw('UPPER(code) = ?', [$couponCode])
+            ->where('is_active', 1)
+            ->first();
+
+        if ($coupon) {
+            $discountPercent = $coupon->discount_percent;
+            $discountAmount = $subtotal * ($discountPercent / 100);
         }
     }
 
-    $orderCode = 'DH-' . strtoupper(uniqid());
+    $totalAmount = $subtotal - $discountAmount;
+    // --------------------------
 
     DB::beginTransaction();
 
@@ -78,8 +141,6 @@ class OrderController extends Controller
             'status' => 'pending',
             'process_status' => 'received',
         ]);
-
-
 
         foreach ($cartItems as $item) {
             if ($item->product) {
@@ -156,32 +217,7 @@ public function userNotifications()
         return view('thankyou', compact('orderCode', 'orderDate'));
     }
 
-public function history(Request $request)
-{
-    $isAdminMode = session('admin_mode', false)
-        && auth()->check()
-        && auth()->user()->role === 'admin';
 
-    $query = \App\Models\Order::with(['user', 'items.product']);
-
-    if (!$isAdminMode) {
-        $query->where('user_id', auth()->id());
-    }
-
-    if ($request->search) {
-        $query->where('code', 'like', '%' . $request->search . '%');
-    }
-
-    if ($request->filter === 'processing') {
-        $query->where('process_status', '!=', 'completed');
-    }
-
-    $orders = $query->orderBy('created_at', 'desc')
-        ->paginate(10)
-        ->appends($request->all());
-
-    return view('orders.history', compact('orders', 'isAdminMode'));
-}
 
 public function getDetailApi($id)
 {
@@ -229,7 +265,34 @@ public function getDetailApi($id)
     ]);
 }
 
+public function history(Request $request)
+{
+    $isAdminMode = session('admin_mode', false)
+        && auth()->check()
+        && auth()->user()->role === 'admin';
 
+    $query = \App\Models\Order::with(['user', 'items.product']);
+
+    if (!$isAdminMode) {
+        $query->where('user_id', auth()->id());
+    }
+
+    if ($request->search) {
+        $query->where('code', 'like', '%' . $request->search . '%');
+    }
+
+    if ($request->filter === 'processing') {
+        $query->where('process_status', '!=', 'completed');
+    }
+
+    $orders = $query->orderBy('created_at', 'desc')
+        ->paginate(10)
+        ->appends($request->all());
+
+    return view('orders.history', compact('orders', 'isAdminMode'));
+}
+
+//Trạng thái đơn hàng//
 public function updateProcess(Request $request, $id)
 {
     $isAdminMode = session('admin_mode', false)
@@ -249,14 +312,14 @@ public function updateProcess(Request $request, $id)
 
     $order = \App\Models\Order::findOrFail($id);
 
-    // Lưu trạng thái cũ (nếu cần so sánh)
+    // Lưu trạng thái cũ 
     $oldStatus = $order->process_status;
 
     $order->process_status = $request->process_status;
     $order->status = $request->process_status === 'completed' ? 'completed' : 'pending';
     $order->save();
 
-    // 🔔 Tạo notification cho USER
+    // Thoongh báo
     if ($order->user_id) {
 
         $title = 'Cập nhật đơn hàng';
@@ -421,7 +484,7 @@ public function adminReport(Request $request)
         ->get()
         ->map(function ($p) {
             if (!$p->image) {
-                $p->image_url = 'https://via.placeholder.com/400';
+                $p->image_url = 'https://flycamgiare.vn/wp-content/uploads/2026/03/Flycam-DJi-Avata-360-canh.jpg';
             } elseif (str_starts_with($p->image, 'http://') || str_starts_with($p->image, 'https://')) {
                 $p->image_url = $p->image;
             } else {

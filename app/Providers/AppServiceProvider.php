@@ -11,6 +11,8 @@ use App\Models\Product;
 use App\Observers\UserObserver;
 use App\Observers\OrderObserver;
 use App\Observers\ProductObserver;
+use App\Models\Category;
+use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,5 +28,9 @@ class AppServiceProvider extends ServiceProvider
         User::observe(UserObserver::class);
         Order::observe(OrderObserver::class);
         Product::observe(ProductObserver::class);
+
+        View::composer('shared.header', function ($view) {
+        $view->with('categories', Category::all());
+    });
     }
 }

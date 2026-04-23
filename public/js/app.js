@@ -464,8 +464,108 @@ function resetBtn() {
 }
 
 // =====================
+// Mã giảm giá 
+// =====================
+
+function formatVND(number) {
+    return new Intl.NumberFormat('vi-VN').format(number) + '₫';
+}
+
+function applyCoupon() {
+    const codeInput = document.getElementById('coupon_code');
+    const hiddenCoupon = document.getElementById('hidden_coupon_code');
+    const msg = document.getElementById('coupon-message');
+
+    if (!codeInput) return;
+
+    const code = codeInput.value.trim();
+
+    if (!code) {
+        msg.classList.remove('hidden');
+        msg.classList.remove('text-green-600');
+        msg.classList.add('text-red-500');
+        msg.innerText = 'Vui lòng nhập mã giảm giá';
+        return;
+    }
+
+    fetch('/check-coupon', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ code: code })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) {
+            msg.classList.remove('hidden');
+            msg.classList.remove('text-green-600');
+            msg.classList.add('text-red-500');
+            msg.innerText = data.message || 'Mã giảm giá không hợp lệ';
+
+            document.getElementById('discount-display').innerText = '0₫';
+            document.getElementById('total-display').innerText = document.getElementById('subtotal-display').innerText;
+            if (hiddenCoupon) hiddenCoupon.value = '';
+            return;
+        }
+
+        document.getElementById('subtotal-display').innerText = formatVND(data.subtotal);
+        document.getElementById('discount-display').innerText = '-' + formatVND(data.discount_amount);
+        document.getElementById('total-display').innerText = formatVND(data.total);
+
+        if (hiddenCoupon) hiddenCoupon.value = data.code;
+
+        msg.classList.remove('hidden');
+        msg.classList.remove('text-red-500');
+        msg.classList.add('text-green-600');
+        msg.innerText = `Áp dụng thành công mã ${data.code} - giảm ${data.discount_percent}%`;
+    })
+    .catch(() => {
+        msg.classList.remove('hidden');
+        msg.classList.remove('text-green-600');
+        msg.classList.add('text-red-500');
+        msg.innerText = 'Có lỗi xảy ra khi kiểm tra mã';
+    });
+}
+
+// =====================
 // CHECKOUT MODAL LOGIC (MỚI)
 // =====================
+
+function goToCheckout() {
+    window.location.href = '/dat-hang';
+}
+
+
+function openCheckoutModalOnly() {
+    const modal = document.getElementById('checkoutModal');
+    const overlay = document.getElementById('checkoutOverlay');
+    const panel = document.getElementById('checkoutPanel');
+    const errorEl = document.getElementById('checkoutModalError');
+    
+
+    if (!modal) return;
+
+    if (errorEl) {
+        errorEl.classList.add('hidden');
+        errorEl.innerText = '';
+    }
+
+    modal.classList.remove('hidden');
+
+    setTimeout(() => {
+        if (overlay) overlay.classList.remove('opacity-0');
+        if (panel) {
+            panel.classList.remove('scale-95', 'opacity-0');
+            panel.classList.add('scale-100', 'opacity-100');
+        }
+    }, 10);
+
+    document.body.style.overflow = 'hidden';
+}
+
 
 // 1. Hàm này được gọi khi bấm "Đặt hàng ngay" ở giỏ hàng
 function confirmOrder() {
@@ -914,42 +1014,43 @@ function closeCheckoutModal() {
 // 3. Hàm này được gọi khi bấm "Xác nhận đặt hàng" BÊN TRONG Modal
 function submitOrder() {
     const errorEl = document.getElementById('checkoutModalError');
-    
-    // Lấy dữ liệu từ các input trong Modal (chú ý ID phải khớp với file checkout_modal.blade.php)
+
     const name = document.getElementById('checkout_name').value;
     const phone = document.getElementById('checkout_phone').value;
     const address = document.getElementById('checkout_address').value;
     const email = document.getElementById('checkout_email').value;
     const note = document.getElementById('checkout_note').value;
-    const paymentMethod = 'cod'; // Mặc định COD
 
-    // Validate phía Client (Kiểm tra rỗng)
+    const hiddenCoupon = document.getElementById('hidden_coupon_code')?.value || '';
+    const typedCoupon = document.getElementById('coupon_code')?.value.trim() || '';
+    const couponCode = hiddenCoupon || typedCoupon; 
+
+    const paymentMethod = 'cod';
+
     if (!name || !phone || !address || !email) {
-        if(errorEl) {
+        if (errorEl) {
             errorEl.innerText = "Vui lòng điền đầy đủ thông tin các trường có dấu (*)!";
             errorEl.classList.remove('hidden');
         }
         return;
     }
 
-    // Chuẩn bị dữ liệu gửi đi
     const formData = {
         name: name,
         phone: phone,
         email: email,
         address: address,
         note: note,
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        coupon_code: couponCode
     };
 
-    // Hiển thị trạng thái đang tải
     const btn = document.getElementById('btnSubmitOrder');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<span class="iconify animate-spin" data-icon="lucide:loader-2"></span> Đang xử lý...';
     btn.disabled = true;
-    if(errorEl) errorEl.classList.add('hidden');
+    if (errorEl) errorEl.classList.add('hidden');
 
-    // Gửi request về Server (Giữ nguyên logic fetch cũ của bạn)
     fetch('/dat-hang', {
         method: 'POST',
         headers: {
@@ -962,21 +1063,18 @@ function submitOrder() {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Thành công: Chuyển hướng
             window.location.href = data.redirect;
         } else {
-            // Thất bại: Hiện lỗi trong Modal
-            if(errorEl) {
+            if (errorEl) {
                 errorEl.innerText = data.message || "Có lỗi xảy ra, vui lòng thử lại.";
                 errorEl.classList.remove('hidden');
             }
-            // Reset nút bấm
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
     })
     .catch(() => {
-        if(errorEl) {
+        if (errorEl) {
             errorEl.innerText = "Lỗi kết nối mạng. Vui lòng thử lại.";
             errorEl.classList.remove('hidden');
         }
@@ -984,7 +1082,6 @@ function submitOrder() {
         btn.disabled = false;
     });
 }
-
 // =====================
 // Search & Filter
 // =====================

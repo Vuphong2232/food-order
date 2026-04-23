@@ -84,7 +84,7 @@
 
 
         <div id="product-grid"
-             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+             class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
 
             @forelse($products as $product)
 
@@ -185,16 +185,13 @@
 @push('scripts')
 <script>
     window.addEventListener('load', function () {
-        const skeleton = document.getElementById('menu-skeleton');
-        const realContent = document.getElementById('menu-real-content');
+    const skeleton = document.getElementById('menu-skeleton');
+    const grid = document.getElementById('product-grid');
 
-        if (skeleton) {
-            skeleton.classList.add('hidden');
-        }
-
-        if (realContent) {
-            realContent.classList.remove('hidden');
-        }
-    });
+    setTimeout(() => {
+        if (skeleton) skeleton.classList.add('hidden');
+        if (grid) grid.classList.remove('hidden');
+    }, 800);
+});
 </script>
 @endpush

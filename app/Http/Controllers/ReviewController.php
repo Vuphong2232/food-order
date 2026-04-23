@@ -9,26 +9,31 @@ use Illuminate\Http\Request;
 class ReviewController extends Controller
 {
     public function createReviewSp($orderId, $productId)
-    {
-        $order = Order::with('items.product')
-            ->where('id', $orderId)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
+{
+    $order = Order::with('items.product')
+        ->where('id', $orderId)
+        ->where('user_id', auth()->id())
+        ->firstOrFail();
 
-        if ($order->status !== 'completed' && $order->process_status !== 'completed') {
-            return response()->make('Chỉ được đánh giá khi đơn hàng đã hoàn tất', 403);
-        }
-
-        $item = $order->items->firstWhere('product_id', $productId);
-
-        if (!$item) {
-            abort(404);
-        }
-
-        $product = $item->product;
-
-        return view('orders.review_sp', compact('order', 'product', 'item'));
+    if ($order->status !== 'completed' && $order->process_status !== 'completed') {
+        return response()->make('Chỉ được đánh giá khi đơn hàng đã hoàn tất', 403);
     }
+
+    $item = $order->items->firstWhere('product_id', $productId);
+
+    if (!$item) {
+        abort(404);
+    }
+
+    $product = $item->product;
+
+    $reviewedProductIds = Review::where('user_id', auth()->id())
+        ->where('order_id', $order->id)
+        ->pluck('product_id')
+        ->toArray();
+
+    return view('orders.review_sp', compact('order', 'product', 'item', 'reviewedProductIds'));
+}
 
     public function createReview($orderId, $productId)
     {
@@ -110,8 +115,7 @@ class ReviewController extends Controller
 
             if ($existingReview) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Bạn đã đánh giá sản phẩm này trong đơn hàng này rồi'
+                    'success' => false
                 ], 400);
             }
 

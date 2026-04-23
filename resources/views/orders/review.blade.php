@@ -145,11 +145,32 @@
         const data = await res.json();
         console.log('review response:', data);
 
-        if (res.ok && data.success) {
-            closeReviewModal();
-        } else {
-            alert(data.message || 'Gửi đánh giá thất bại');
-        }
+       if (res.ok && data.success) {
+    const btn = document.querySelector(`[data-review-btn="true"][data-product-id="${productId}"]`);
+
+    if (btn) {
+        btn.outerHTML = `
+            <span class="px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+                <span class="iconify text-sm" data-icon="lucide:check"></span>
+                Đã đánh giá
+            </span>
+        `;
+    }
+
+    closeReviewModal();
+
+    if (typeof showToast === 'function') {
+        showToast(data.message || 'Đánh giá thành công', 'success');
+    } else {
+        alert(data.message || 'Đánh giá thành công');
+    }
+} else {
+    if (typeof showToast === 'function') {
+        showToast(data.message || 'Gửi đánh giá thất bại', 'error');
+    } else {
+        alert(data.message || 'Gửi đánh giá thất bại');
+    }
+}
     } catch (error) {
         console.error(error);
         alert('Lỗi kết nối');

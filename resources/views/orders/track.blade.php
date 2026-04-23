@@ -64,7 +64,7 @@
             <h4 class="text-sm font-bold text-[#7a4e2d] uppercase">Danh sách món</h4>
         </div>
 
-        <div class="divide-y divide-[#e8d9c9]">
+        <div class="max-h-44 overflow-y-auto divide-y divide-[#e8d9c9]">
             @forelse($order->items as $item)
                 @php
                     $price = $item->price ?? 0;

@@ -5,7 +5,7 @@
         <div class="max-w-2xl animate-fade-in-up">
             <div class="inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm border border-brown-200/50 rounded-full px-4 py-1.5 mb-4">
                 <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span class="text-xs font-medium text-brown-600">Đang giao hàng — 25 phút trung bình</span>
+                <span class="text-xs font-medium text-brown-600">Đang hoạt động — Đơn hàng sẽ được giao trong 15-30 phút </span>
             </div>
             <h1 class="font-serif text-4xl md:text-5xl font-bold text-brown-900 leading-[1.1] tracking-tight mb-4">
                 Thưởng thức <span class="text-brown-600">hương vị</span> tuyệt hảo

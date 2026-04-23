@@ -9,6 +9,7 @@ use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ContactController;
 
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -19,6 +20,12 @@ Route::post('/dang-ky', [AuthController::class, 'register']);
 
 Route::get('/quen-mat-khau', [AuthController::class, 'showForgotPassword'])->name('password.request');
 Route::post('/quen-mat-khau', [AuthController::class, 'forgotPassword'])->name('password.email');
+
+Route::get('/xac-nhan-ma', [AuthController::class, 'showVerifyCodeForm'])->name('password.verify.form');
+Route::post('/xac-nhan-ma', [AuthController::class, 'verifyCode'])->name('password.verify');
+
+Route::get('/dat-lai-mat-khau', [AuthController::class, 'showResetPasswordForm'])->name('password.reset.form');
+Route::post('/dat-lai-mat-khau', [AuthController::class, 'resetPassword'])->name('password.update.custom');
 
 Route::post('/dang-xuat', [AuthController::class, 'logout'])->name('logout');
 
@@ -43,7 +50,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::put('/products/{product}', [ProductController::class, 'update']);
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
-    Route::get('/products/{product}', [ProductController::class, 'detail'])->name('product.show');
+    Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
 
     // Route hiển thị trang quản lý danh mục
     Route::get('/admin/danh-muc', [CategoryController::class, 'index'])->name('admin.categories');
@@ -66,6 +73,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dat-hang', [OrderController::class, 'index'])->name('checkout');
     Route::post('/dat-hang', [OrderController::class, 'store'])->name('checkout.store');
+    Route::post('/check-coupon', [OrderController::class, 'checkCoupon'])->name('checkout.checkCoupon');
     Route::get('/cam-on', [OrderController::class, 'thankyou'])->name('thankyou');
 
     Route::get('/lich-su-mua-hang', [OrderController::class, 'history'])->name('orders.history');
@@ -75,11 +83,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/don-hang/{id}/theo-doi', [OrderController::class, 'track'])->name('orders.track');
     Route::get('/don-hang/{id}/xuat-hoa-don', [OrderController::class, 'exportInvoice'])->name('orders.export');
     Route::post('/orders/{id}/update-process', [OrderController::class, 'updateProcess'])->name('orders.updateProcess')->middleware(['auth']);
-    Route::get('/orders/{order}/review-sp/{product}', [ReviewController::class, 'createReviewSp'])->name('orders.review_sp');
-    Route::get('/orders/review/{order}/{product}', [ReviewController::class, 'createReview'])->name('orders.review');
+Route::get('/orders/{orderId}/review-sp/{productId}', [ReviewController::class, 'createReviewSp']);
+Route::get('/orders/review/{order}/{product}', [ReviewController::class, 'createReview'])->name('orders.review');
 
 
     Route::get('/admin/thong-ke', [OrderController::class, 'adminReport'])->name('admin.report');
     Route::get('/admin/notifications', [OrderController::class, 'adminNotifications'])->name('admin.notifications');
     Route::get('/thong-bao', [OrderController::class, 'userNotifications'])->name('user.notifications');
+    Route::get('/lien-he', [ContactController::class, 'index'])->name('contact')->middleware('auth');
+    Route::post('/lien-he', [ContactController::class, 'submit'])->name('contact.submit')->middleware('auth');
 });

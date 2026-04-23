@@ -23,21 +23,8 @@
     </div>
 
     <div id="cart-footer" class="border-t border-brown-100 px-6 py-5 shrink-0 space-y-3 hidden">
-        <div class="flex items-center justify-between">
-            <span class="text-sm text-brown-500">Tạm tính</span>
-            <span id="cart-subtotal" class="text-sm text-brown-700">0₫</span>
-        </div>
-        <div class="flex items-center justify-between">
-            <span class="text-sm text-brown-500">Phí giao hàng</span>
-            <span class="text-sm text-green-600 font-medium">Miễn phí</span>
-        </div>
-        <div class="h-px bg-brown-100"></div>
-        <div class="flex items-center justify-between">
-            <span class="font-semibold text-brown-900">Tổng cộng</span>
-            <span id="cart-total" class="font-bold text-xl text-brown-800 font-serif">0₫</span>
-        </div>
         <!-- Nút đặt hàng -->
-        <button onclick="confirmOrder()" 
+        <button onclick="goToCheckout()" 
             class="w-full h-12 bg-brown-600 text-white font-semibold rounded-2xl hover:bg-brown-700 transition-all shadow-lg shadow-brown-600/20 flex items-center justify-center gap-2">
             
             <span class="iconify" data-icon="lucide:credit-card"></span>
