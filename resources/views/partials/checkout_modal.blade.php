@@ -71,7 +71,7 @@
                         </div>
 
                         <!-- Phương thức thanh toán (Mặc định COD) -->
-                        <input type="hidden" name="payment_method" value="cod">
+                        <input type="hidden" name="payment_method" id="modal_payment_method" value="cod">
 
                         <!-- Hiển thị lỗi (Màu đỏ, dễ thấy) -->
                         <p id="checkoutModalError" class="text-red-600 text-sm font-medium mt-2 hidden text-center bg-red-50 py-2 rounded-lg border border-red-100"></p>

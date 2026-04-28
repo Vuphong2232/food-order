@@ -51,6 +51,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/products/{product}', [ProductController::class, 'update']);
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
     Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show');
+    Route::get('/thanh-toan-qr/{order}', [OrderController::class, 'bankPayment'])
+    ->name('bank.payment');
+
+    Route::post('/thanh-toan-qr/{order}/xac-nhan', [OrderController::class, 'confirmBankPayment'])
+    ->name('bank.payment.confirm');
 
     // Route hiển thị trang quản lý danh mục
     Route::get('/admin/danh-muc', [CategoryController::class, 'index'])->name('admin.categories');
@@ -60,6 +65,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{category}', [CategoryController::class, 'update']);
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+
+    // Route hiển thị trang quản lý mã giảm giá
+    Route::get('/admin/ma-giam-gia', [App\Http\Controllers\CouponController::class, 'index'])->name('admin.coupons');
+
+    // Route API CRUD mã giảm giá
+    Route::get('/api/coupons', [App\Http\Controllers\CouponController::class, 'getCoupons']);
+    Route::post('/coupons', [App\Http\Controllers\CouponController::class, 'store']);
+    Route::put('/coupons/{coupon}', [App\Http\Controllers\CouponController::class, 'update']);
+    Route::delete('/coupons/{coupon}', [App\Http\Controllers\CouponController::class, 'destroy']);
 
     Route::get('/gio-hang', [CartController::class, 'index'])->name('cart.index');
     Route::post('/them-vao-gio', [CartController::class, 'store'])->name('cart.store');
@@ -83,12 +97,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/don-hang/{id}/theo-doi', [OrderController::class, 'track'])->name('orders.track');
     Route::get('/don-hang/{id}/xuat-hoa-don', [OrderController::class, 'exportInvoice'])->name('orders.export');
     Route::post('/orders/{id}/update-process', [OrderController::class, 'updateProcess'])->name('orders.updateProcess')->middleware(['auth']);
-Route::get('/orders/{orderId}/review-sp/{productId}', [ReviewController::class, 'createReviewSp']);
-Route::get('/orders/review/{order}/{product}', [ReviewController::class, 'createReview'])->name('orders.review');
+    Route::get('/orders/{orderId}/review-sp/{productId}', [ReviewController::class, 'createReviewSp']);
+    Route::get('/orders/review/{order}/{product}', [ReviewController::class, 'createReview'])->name('orders.review');
 
 
     Route::get('/admin/thong-ke', [OrderController::class, 'adminReport'])->name('admin.report');
-    Route::get('/admin/notifications', [OrderController::class, 'adminNotifications'])->name('admin.notifications');
+    Route::get('/admin/notifications', [AdminNotificationController::class, 'index'])->name('admin.notifications');
     Route::get('/thong-bao', [OrderController::class, 'userNotifications'])->name('user.notifications');
     Route::get('/lien-he', [ContactController::class, 'index'])->name('contact')->middleware('auth');
     Route::post('/lien-he', [ContactController::class, 'submit'])->name('contact.submit')->middleware('auth');

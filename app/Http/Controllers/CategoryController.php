@@ -16,9 +16,9 @@ class CategoryController extends Controller
 
     public function getCategories()
     {
-        $categories = Category::where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $categories = Category::withCount('products')
+            ->orderByDesc('id')
+            ->get(['id', 'name', 'slug', 'is_active']);
 
         return response()->json([
             'data' => $categories

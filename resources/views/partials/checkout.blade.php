@@ -174,16 +174,16 @@
 
                         <label class="group flex items-center gap-3 px-4 py-3 rounded-2xl border border-brown-200 bg-white cursor-pointer hover:border-orange-300 hover:bg-orange-50/40 transition-all">
                             <input type="radio"
-                                   name="payment_method"
-                                   value="vnpay"
-                                   class="w-4 h-4 text-orange-500 focus:ring-orange-400">
+                                name="payment_method"
+                                value="bank"
+                                class="w-4 h-4 text-orange-500 focus:ring-orange-400">
 
                             <div class="flex-1">
                                 <p class="text-sm font-semibold text-brown-800">
-                                    Ví VNPAY
+                                    Thanh toán online
                                 </p>
                                 <p class="text-xs text-brown-500 mt-0.5">
-                                    Thanh toán online nhanh chóng và tiện lợi
+                                    Thanh toán online nhanh chóng và tiện lợi, sẽ có cơ hội nhận mã giảm giá lên đến 30%
                                 </p>
                             </div>
                         </label>
@@ -243,6 +243,120 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function getSelectedPaymentMethod() {
+        const selected = document.querySelector('input[name="payment_method"]:checked');
+        return selected ? selected.value : 'cod';
+    }
+
+    function openCheckoutModalOnly() {
+        const modalPayment = document.getElementById('modal_payment_method');
+
+        if (modalPayment) {
+            modalPayment.value = getSelectedPaymentMethod();
+        }
+
+        const modal = document.getElementById('checkoutModal');
+        const overlay = document.getElementById('checkoutOverlay');
+        const panel = document.getElementById('checkoutPanel');
+
+        if (!modal || !overlay || !panel) return;
+
+        modal.classList.remove('hidden');
+
+        setTimeout(() => {
+            overlay.classList.remove('opacity-0');
+            panel.classList.remove('scale-95', 'opacity-0');
+            panel.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeCheckoutModal() {
+        const modal = document.getElementById('checkoutModal');
+        const overlay = document.getElementById('checkoutOverlay');
+        const panel = document.getElementById('checkoutPanel');
+
+        if (!modal || !overlay || !panel) return;
+
+        overlay.classList.add('opacity-0');
+        panel.classList.add('scale-95', 'opacity-0');
+        panel.classList.remove('scale-100', 'opacity-100');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 200);
+    }
+
+    async function submitOrder() {
+        const form = document.getElementById('orderForm');
+        const errorBox = document.getElementById('checkoutModalError');
+        const btn = document.getElementById('btnSubmitOrder');
+
+        if (!form) return;
+
+        const modalPayment = document.getElementById('modal_payment_method');
+        if (modalPayment) {
+            modalPayment.value = getSelectedPaymentMethod();
+        }
+
+        if (errorBox) {
+            errorBox.classList.add('hidden');
+            errorBox.innerText = '';
+        }
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const formData = new FormData(form);
+
+        const couponInput = document.getElementById('hidden_coupon_code');
+        if (couponInput && couponInput.value) {
+            formData.append('coupon_code', couponInput.value);
+        }
+
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = 'Đang xử lý...';
+            }
+
+            const response = await fetch("{{ route('checkout.store') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                    "Accept": "application/json"
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Đặt hàng thất bại');
+            }
+
+            window.location.href = data.redirect;
+        } catch (error) {
+            if (errorBox) {
+                errorBox.innerText = error.message;
+                errorBox.classList.remove('hidden');
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <span class="iconify mr-1.5" data-icon="lucide:check-circle"></span>
+                    Xác nhận đặt hàng
+                `;
+            }
+        }
+    }
+</script>
+@endpush
 
 @section('modal')
     @include('partials.checkout_modal', ['subtotal' => $subtotal ?? 0])

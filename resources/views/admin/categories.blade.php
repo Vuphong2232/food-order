@@ -112,7 +112,8 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-right space-x-2">
-                            <button onclick="editCategory(${cat.id}, '${cat.name.replace(/'/g, "\\'")}')" class="text-blue-600 hover:text-blue-800">
+                            <button onclick="editCategory(${cat.id}, '${cat.name.replace(/'/g, "\\'")}', ${cat.is_active ? 1 : 0})"
+                                    class="text-blue-600 hover:text-blue-800">
                                 <span class="iconify" data-icon="lucide:edit-2"></span>
                             </button>
                             <button onclick="deleteCategory(${cat.id})" class="text-red-500 hover:text-red-700">
@@ -133,6 +134,7 @@
     function openCategoryModal() {
         document.getElementById('category-form').reset();
         document.getElementById('cat-id').value = '';
+        document.getElementById('cat-status').checked = true;
         document.getElementById('cat-modal-title').innerText = 'Thêm danh mục';
         document.getElementById('category-modal').classList.remove('hidden');
     }
@@ -141,9 +143,10 @@
         document.getElementById('category-modal').classList.add('hidden');
     }
 
-    function editCategory(id, name) {
+    function editCategory(id, name, isActive) {
         document.getElementById('cat-id').value = id;
         document.getElementById('cat-name').value = name;
+        document.getElementById('cat-status').checked = Number(isActive) === 1;
         document.getElementById('cat-modal-title').innerText = 'Sửa danh mục';
         document.getElementById('category-modal').classList.remove('hidden');
     }

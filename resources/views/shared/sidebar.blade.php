@@ -28,6 +28,12 @@
                 Quản lý danh mục
             </a>
 
+            <a href="{{ route('admin.coupons') }}"
+            class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.coupons') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
+                <span class="iconify text-lg" data-icon="lucide:percent"></span>
+                Quản lý mã giảm giá
+            </a>
+
             <a href="{{ route('orders.history') }}"
             class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('orders.history') ? 'bg-brown-600 text-white shadow-lg shadow-brown-600/20' : 'text-brown-300 hover:bg-brown-800 hover:text-white' }}">
                 <span class="iconify text-lg" data-icon="lucide:clipboard-list"></span>

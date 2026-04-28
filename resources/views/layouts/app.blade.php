@@ -185,6 +185,8 @@ document.addEventListener("DOMContentLoaded", function() {
     @endif
 
 });
-</script>
+</script>   
+
+@include('chatbox')
 </body>
 </html>

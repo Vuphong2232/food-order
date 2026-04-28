@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
+use App\Models\Notification;
 
 class AdminNotificationController extends Controller
 {
     public function index()
     {
-        $orders = Order::latest()->take(20)->get();
+        $notifications = Notification::latest()
+            ->take(30)
+            ->get();
 
-        return view('admin.notifications', compact('orders'));
+        return view('admin.notifications', compact('notifications'));
     }
 }

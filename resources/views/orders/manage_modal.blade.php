@@ -80,6 +80,7 @@
                             <option value="preparing">Chuẩn bị đơn hàng</option>
                             <option value="shipping">Giao hàng</option>
                             <option value="completed">Hoàn tất đơn hàng</option>
+                            <option value="cancelled">Hủy đơn hàng</option>
                         </select>
                     </div>
 

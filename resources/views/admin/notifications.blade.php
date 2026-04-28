@@ -16,7 +16,7 @@
                 Lịch sử thông báo
             </h1>
             <p class="text-sm text-brown-500 mt-1">
-                Xem các thông báo đơn hàng mới và hoạt động của hệ thống.
+                Xem các thông báo đơn hàng, sản phẩm, danh mục và mã giảm giá mới.
             </p>
         </div>
 
@@ -34,7 +34,6 @@
             <div class="bg-white rounded-2xl shadow-sm border border-brown-100 p-4 overflow-hidden">
                 <div class="flex gap-4">
                     <div class="w-10 h-10 rounded-full skeleton shrink-0"></div>
-
                     <div class="flex-1">
                         <div class="flex justify-between items-start gap-3">
                             <div class="flex-1">
@@ -42,7 +41,6 @@
                                 <div class="h-3 w-full rounded skeleton mb-2"></div>
                                 <div class="h-3 w-3/4 rounded skeleton"></div>
                             </div>
-
                             <div class="flex flex-col items-end gap-2 shrink-0">
                                 <div class="h-3 w-16 rounded skeleton"></div>
                                 <div class="h-7 w-20 rounded-lg skeleton"></div>
@@ -60,10 +58,12 @@
             <div class="space-y-4">
                 @foreach($notifications as $notif)
                     @php
-                        $borderColor = 'border-l-green-500';
+                        // Khởi tạo mặc định
+                        $borderColor = 'border-l-gray-300';
                         $icon = 'bell';
-                        $iconColor = 'text-green-500';
+                        $iconColor = 'text-gray-500';
 
+                        // Logic xử lý màu sắc và icon theo loại
                         if ($notif->type == 'user_register') {
                             $borderColor = 'border-l-blue-500';
                             $icon = 'user-plus';
@@ -92,6 +92,32 @@
                             $borderColor = 'border-l-emerald-500';
                             $icon = 'shopping-bag';
                             $iconColor = 'text-emerald-500';
+                        
+                        // --- THÊM MỚI: MÃ GIẢM GIÁ ---
+                        } elseif ($notif->type == 'coupon_created') {
+                            $borderColor = 'border-l-green-500';
+                            $icon = 'percent';
+                            $iconColor = 'text-green-500';
+                        } elseif ($notif->type == 'coupon_updated') {
+                            $borderColor = 'border-l-blue-500';
+                            $icon = 'edit-3';
+                            $iconColor = 'text-blue-500';
+                        } elseif ($notif->type == 'coupon_deleted') {
+                            $borderColor = 'border-l-red-500';
+                            $icon = 'x-circle';
+                            $iconColor = 'text-red-500';
+                        } elseif ($notif->type == 'category_created') {
+                            $borderColor = 'border-l-teal-500';
+                            $icon = 'folder-plus';
+                            $iconColor = 'text-teal-500';
+                        } elseif ($notif->type == 'category_updated') {
+                            $borderColor = 'border-l-cyan-500';
+                            $icon = 'folder-pen';
+                            $iconColor = 'text-cyan-500';
+                        } elseif ($notif->type == 'category_deleted') {
+                            $borderColor = 'border-l-red-500';
+                            $icon = 'folder-x';
+                            $iconColor = 'text-red-500';
                         }
                     @endphp
 
@@ -141,7 +167,7 @@
                 </div>
                 <h3 class="text-brown-900 font-bold text-lg mb-2">Không có thông báo nào</h3>
                 <p class="text-brown-500 text-sm max-w-md mx-auto mb-6">
-                    Hệ thống chưa ghi nhận được đơn hàng hoặc hoạt động mới nào gần đây.
+                    Hệ thống chưa ghi nhận được hoạt động mới nào gần đây.
                 </p>
                 <a href="{{ route('home') }}" class="text-brown-600 font-medium hover:underline">
                     Về trang chủ

@@ -595,11 +595,9 @@ function confirmOrder() {
     }
 }
 function openInvoiceModal(orderId) {
-
     fetch(`/api/orders/${orderId}`)
         .then(res => res.json())
         .then(data => {
-
             if (!data.success) {
                 showToast("Không tìm thấy đơn hàng", "error");
                 return;
@@ -607,47 +605,117 @@ function openInvoiceModal(orderId) {
 
             const order = data.order;
 
-            // ====== GÁN DATA ======
+            const isPaid = order.is_paid === true || order.payment_status === 'paid';
+
+            const itemTotal = (order.items || []).reduce(function (sum, item) {
+                return sum + Number(item.subtotal || 0);
+            }, 0);
+
+            const originalTotal = Number(order.original_total_amount || 0) > 0
+                ? Number(order.original_total_amount)
+                : itemTotal;
+
+            const remainingTotal = isPaid ? 0 : originalTotal;
+
             document.getElementById('invoice-code').innerText = '#' + order.code;
-            document.getElementById('invoice-date').innerText = new Date(order.created_at).toLocaleString();
-            document.getElementById('invoice-name').innerText = order.name;
-            document.getElementById('invoice-phone').innerText = order.phone;
-            document.getElementById('invoice-address').innerText = order.address;
-            document.getElementById('invoice-total').innerText = Number(order.total_amount).toLocaleString() + '₫';
+            document.getElementById('invoice-date').innerText = new Date(order.created_at).toLocaleString('vi-VN');
+            document.getElementById('invoice-name').innerText = order.name || 'N/A';
+            document.getElementById('invoice-phone').innerText = order.phone || 'N/A';
+            document.getElementById('invoice-address').innerText = order.address || 'N/A';
 
-            // ====== STATUS ======
-            let statusText = "Chờ xử lý";
-            let statusClass = "bg-yellow-100 text-yellow-700";
+            const paymentStatusEl = document.getElementById('invoice-payment-status');
+            const paymentMethodEl = document.getElementById('invoice-payment-method');
 
-            if (order.status === 'completed') {
-                statusText = "Hoàn thành";
-                statusClass = "bg-green-100 text-green-700";
+            if (paymentStatusEl) {
+                paymentStatusEl.innerText = isPaid ? 'Đã thanh toán' : 'Chưa thanh toán';
+                paymentStatusEl.className = isPaid
+                    ? 'mt-1 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 inline-block'
+                    : 'mt-1 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 inline-block';
+            }
+
+            if (paymentMethodEl) {
+                const methodLabels = {
+                    cod: 'Thanh toán khi nhận hàng',
+                    bank: 'QR ngân hàng',
+                    vnpay: 'VNPay'
+                };
+
+                paymentMethodEl.innerText = methodLabels[order.payment_method] || 'Không xác định';
+            }
+
+            const originalTotalEl = document.getElementById('invoice-original-total');
+            const totalEl = document.getElementById('invoice-total');
+            const paymentNoteEl = document.getElementById('invoice-payment-note');
+
+            if (originalTotalEl) {
+                originalTotalEl.innerText = originalTotal.toLocaleString('vi-VN') + '₫';
+            }
+
+            if (totalEl) {
+                totalEl.innerText = remainingTotal.toLocaleString('vi-VN') + '₫';
+                totalEl.className = isPaid
+                    ? 'text-2xl font-extrabold text-green-700 font-serif'
+                    : 'text-2xl font-extrabold text-brown-900 font-serif';
+            }
+
+            if (paymentNoteEl) {
+                paymentNoteEl.innerText = isPaid
+                    ? 'Đơn hàng đã được thanh toán, số tiền còn phải trả là 0đ.'
+                    : 'Đơn hàng chưa thanh toán, vui lòng thanh toán theo phương thức đã chọn.';
+            }
+
+            let statusText = 'Chờ xử lý';
+            let statusClass = 'bg-yellow-100 text-yellow-700';
+
+            if (order.process_status === 'waiting_payment') {
+                statusText = 'Chờ thanh toán';
+                statusClass = 'bg-orange-100 text-orange-700';
+            } else if (order.process_status === 'received') {
+                statusText = 'Chờ tiếp nhận';
+                statusClass = 'bg-yellow-100 text-yellow-700';
+            } else if (order.process_status === 'preparing') {
+                statusText = 'Đang chuẩn bị';
+                statusClass = 'bg-blue-100 text-blue-700';
+            } else if (order.process_status === 'shipping') {
+                statusText = 'Đang giao';
+                statusClass = 'bg-purple-100 text-purple-700';
+            } else if (order.process_status === 'completed' || order.status === 'completed') {
+                statusText = 'Hoàn thành';
+                statusClass = 'bg-green-100 text-green-700';
             }
 
             const statusEl = document.getElementById('invoice-status');
             statusEl.innerText = statusText;
-            statusEl.className = `mt-1 px-3 py-1 rounded-full text-xs font-bold ${statusClass}`;
+            statusEl.className = `mt-1 px-3 py-1 rounded-full text-xs font-bold inline-block ${statusClass}`;
 
-            // ====== ITEMS ======
             let itemsHtml = '';
 
-            if (order.items) {
+            if (order.items && order.items.length > 0) {
                 order.items.forEach(item => {
+                    const itemSubtotal = Number(item.subtotal || (item.price * item.quantity) || 0);
+
                     itemsHtml += `
                         <tr class="border-b border-brown-100">
                             <td class="px-4 py-2">${item.name}</td>
                             <td class="px-4 py-2 text-center">x${item.quantity}</td>
                             <td class="px-4 py-2 text-right">
-                                ${Number(item.price * item.quantity).toLocaleString()}₫
+                                ${itemSubtotal.toLocaleString('vi-VN')}₫
                             </td>
                         </tr>
                     `;
                 });
+            } else {
+                itemsHtml = `
+                    <tr>
+                        <td colspan="3" class="px-4 py-4 text-center text-brown-400">
+                            Không có sản phẩm
+                        </td>
+                    </tr>
+                `;
             }
 
             document.getElementById('invoice-items-list').innerHTML = itemsHtml;
 
-            // ====== SHOW MODAL ======
             const modal = document.getElementById('invoiceModal');
             const overlay = document.getElementById('invoiceOverlay');
             const panel = document.getElementById('invoicePanel');
@@ -658,7 +726,9 @@ function openInvoiceModal(orderId) {
                 overlay.classList.remove('opacity-0');
                 panel.classList.remove('scale-95', 'opacity-0');
             }, 10);
-
+        })
+        .catch(() => {
+            showToast('Không tải được dữ liệu hóa đơn', 'error');
         });
 }
 
@@ -1025,7 +1095,8 @@ function submitOrder() {
     const typedCoupon = document.getElementById('coupon_code')?.value.trim() || '';
     const couponCode = hiddenCoupon || typedCoupon; 
 
-    const paymentMethod = 'cod';
+    const checkedPayment = document.querySelector('input[name="payment_method"]:checked');
+    const paymentMethod = checkedPayment ? checkedPayment.value : 'cod';
 
     if (!name || !phone || !address || !email) {
         if (errorEl) {

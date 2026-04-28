@@ -29,15 +29,34 @@
                 <div class="px-6 py-6 bg-brown-50/30">
                     
                     <!-- Thông tin trạng thái & Ngày -->
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-start justify-between mb-6">
                         <div>
-                            <span class="text-[10px] font-bold text-brown-400 uppercase tracking-wider">Trạng thái</span>
-                            <div id="invoice-status" class="mt-1 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 inline-block">
+                            <span class="block text-[10px] font-bold text-brown-400 uppercase tracking-wider">
+                                Trạng thái
+                            </span>
+
+                            <div id="invoice-status"
+                                class="mt-1 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 inline-block">
                                 ...
                             </div>
                         </div>
+
+                        <div class="text-center">
+                            <span class="block text-[10px] font-bold text-brown-400 uppercase tracking-wider">
+                                Thanh toán
+                            </span>
+
+                            <div id="invoice-payment-status"
+                                class="mt-1 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 inline-block">
+                                ...
+                            </div>
+                        </div>
+
                         <div class="text-right">
-                            <span class="text-[10px] font-bold text-brown-400 uppercase tracking-wider">Ngày đặt</span>
+                            <span class="block text-[10px] font-bold text-brown-400 uppercase tracking-wider">
+                                Ngày đặt
+                            </span>
+
                             <div id="invoice-date" class="mt-1 text-sm font-semibold text-brown-900">
                                 ...
                             </div>

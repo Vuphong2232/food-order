@@ -100,12 +100,63 @@
                 @foreach($orders as $order)
                     @php
                         $processLabels = [
-                            'received' => ['text' => 'Chờ tiếp nhận', 'class' => 'bg-yellow-50 text-yellow-700 border-yellow-100', 'icon' => 'clock'],
-                            'preparing' => ['text' => 'Chuẩn bị', 'class' => 'bg-blue-50 text-blue-700 border-blue-100', 'icon' => 'chef-hat'],
-                            'shipping' => ['text' => 'Đang giao', 'class' => 'bg-purple-50 text-purple-700 border-purple-100', 'icon' => 'truck'],
-                            'completed' => ['text' => 'Hoàn tất', 'class' => 'bg-green-50 text-green-700 border-green-100', 'icon' => 'check-circle'],
+                            'waiting_payment' => [
+                                'text' => 'Chờ thanh toán',
+                                'class' => 'bg-orange-50 text-orange-700 border-orange-100',
+                                'icon' => 'qr-code'
+                            ],
+                            'received' => [
+                                'text' => 'Chờ tiếp nhận',
+                                'class' => 'bg-yellow-50 text-yellow-700 border-yellow-100',
+                                'icon' => 'clock'
+                            ],
+                            'preparing' => [
+                                'text' => 'Chuẩn bị',
+                                'class' => 'bg-blue-50 text-blue-700 border-blue-100',
+                                'icon' => 'chef-hat'
+                            ],
+                            'shipping' => [
+                                'text' => 'Đang giao',
+                                'class' => 'bg-purple-50 text-purple-700 border-purple-100',
+                                'icon' => 'truck'
+                            ],
+                            'completed' => [
+                                'text' => 'Hoàn tất',
+                                'class' => 'bg-green-50 text-green-700 border-green-100',
+                                'icon' => 'check-circle'
+                            ],
+                            'cancelled' => [
+                                'text' => 'Đơn hàng bị hủy',
+                                'class' => 'bg-red-50 text-red-700 border-red-100',
+                                'icon' => 'circle-x'
+                            ],
                         ];
-                        $currentProcess = $processLabels[$order->process_status ?? 'received'];
+
+                        $currentProcess = $processLabels[$order->process_status ?? 'received'] ?? $processLabels['received'];
+
+                        $isPaid = ($order->payment_status ?? 'unpaid') === 'paid';
+                        $isCancelled = ($order->process_status ?? '') === 'cancelled' || ($order->status ?? '') === 'cancelled';
+
+                        $paymentLabel = $isPaid
+                            ? [
+                                'text' => 'Đã thanh toán',
+                                'class' => 'bg-green-50 text-green-700 border-green-100',
+                                'icon' => 'badge-check'
+                            ]
+                            : [
+                                'text' => 'Chưa thanh toán',
+                                'class' => 'bg-red-50 text-red-700 border-red-100',
+                                'icon' => 'circle-alert'
+                            ];
+
+                        $paymentMethodLabel = match ($order->payment_method) {
+                            'cod' => 'COD',
+                            'bank' => 'QR ngân hàng',
+                            'vnpay' => 'VNPay',
+                            default => 'Không xác định',
+                        };
+
+                        $remainingAmount = $isPaid ? 0 : $order->total_amount;
                     @endphp
 
                     <!-- Order Card - Chiều cao đã giảm (p-4 thay vì p-6) -->
@@ -135,12 +186,13 @@
                             </div>
 
                             <!-- Middle Row: Info & Price (Giảm gap và padding) -->
-                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                                
+                            <!-- Middle Row: Info & Price -->
+                            <div class="grid grid-cols-1 md:grid-cols-10 gap-4 items-center">
+
                                 <!-- Info Column -->
-                                <div class="md:col-span-7 space-y-3">
+                                <div class="md:col-span-7 space-y-3 min-w-0">
                                     @if($isAdminMode)
-                                        <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100">
+                                        <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100 max-w-xl">
                                             <div class="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
                                                 <span class="iconify text-gray-500 text-sm" data-icon="lucide:user"></span>
                                             </div>
@@ -153,34 +205,82 @@
                                         </div>
                                     @endif
 
-                                    <div class="flex items-center gap-2">
+                                    <!-- Trạng thái -->
+                                    <div class="flex items-start gap-2">
                                         <div class="w-7 h-7 rounded-full bg-white border border-brown-100 flex items-center justify-center shadow-sm shrink-0">
                                             <span class="iconify text-brown-400 text-sm" data-icon="lucide:info"></span>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-sm font-medium text-brown-600">Trạng thái:</span>
-                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-bold border {{ $currentProcess['class'] }}">
-                                                <span class="iconify text-sl" data-icon="lucide:{{ $currentProcess['icon'] }}"></span>
-                                                {{ $currentProcess['text'] }}
+
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-sm font-medium text-brown-600">Trạng thái:</span>
+
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-bold border {{ $currentProcess['class'] }}">
+                                                    <span class="iconify text-sm" data-icon="lucide:{{ $currentProcess['icon'] }}"></span>
+                                                    {{ $currentProcess['text'] }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Thanh toán -->
+                                    <div class="flex items-start gap-2">
+                                        <div class="w-7 h-7 rounded-full bg-white border border-brown-100 flex items-center justify-center shadow-sm shrink-0">
+                                            <span class="iconify text-brown-400 text-sm" data-icon="lucide:credit-card"></span>
+                                        </div>
+
+                                        <div class="flex flex-wrap items-center gap-2 min-w-0">
+                                            <span class="text-sm font-medium text-brown-600">Thanh toán:</span>
+
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[13px] font-bold border {{ $paymentLabel['class'] }}">
+                                                <span class="iconify text-sm" data-icon="lucide:{{ $paymentLabel['icon'] }}"></span>
+                                                {{ $paymentLabel['text'] }}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Price Column -->
-                                <div class="md:col-span-5 flex flex-col items-end justify-center gap-2 border-l-0 md:border-l border-dashed border-brown-100 md:pl-4">
+                                <div class="md:col-span-3 flex flex-col items-end justify-center gap-2 border-l-0 md:border-l border-dashed border-brown-100 md:pl-4 min-w-0">
                                     <div class="text-right">
-                                        <div class="text-[14px] text-brown-400 font-bold uppercase tracking-wider mb-0.5">Tổng thanh toán</div>
-                                        <div class="text-xl font-black text-brown-900">
-                                            {{ number_format($order->total_amount) }}₫
+                                        <div class="text-[20px] text-brown-400 font-bold uppercase tracking-wider mb-0.5">
+                                            Tổng thanh toán
                                         </div>
+
+                                        <div class="text-xl font-black {{ $isPaid ? 'text-green-700' : 'text-brown-900' }}">
+                                            {{ number_format($remainingAmount) }}₫
+                                        </div>
+
+                                        @if($isPaid)
+                                            <div class="text-[15px] text-brown-400 mt-1">
+                                                Đã thanh toán: {{ number_format($order->total_amount) }}₫
+                                            </div>
+                                        @else
+                                            <div class="text-[15px] text-red-500 mt-1">
+                                                Cần thanh toán: {{ number_format($order->total_amount) }}₫
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Bottom Row: Actions (Giảm khoảng cách mt-3) -->
                             <div class="mt-3 pt-3 border-t border-brown-100 flex flex-wrap gap-2 justify-end opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                @if(!$isAdminMode)
+                            @if(
+                                !$isCancelled &&
+                                !$isAdminMode &&
+                                $order->payment_method === 'bank' &&
+                                ($order->payment_status ?? 'unpaid') === 'unpaid' &&
+                                ($order->process_status ?? 'received') === 'waiting_payment'
+                            )
+                                <a href="{{ route('bank.payment', $order->id) }}"
+                                onclick="event.stopPropagation();"
+                                class="px-3 py-1.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg text-xs font-semibold hover:bg-orange-100 hover:border-orange-300 transition-colors flex items-center gap-1.5">
+                                    <span class="iconify text-sm" data-icon="lucide:qr-code"></span>
+                                    Thanh toán
+                                </a>
+                            @endif    
+                            @if(!$isAdminMode)
                                     <button type="button"
                                             onclick="event.stopPropagation(); openTrackModal({{ $order->id }})"
                                             class="px-3 py-1.5 bg-brown-50 text-brown-700 border border-brown-200 rounded-lg text-xs font-semibold hover:bg-brown-100 hover:border-brown-300 transition-colors flex items-center gap-1.5">
@@ -188,8 +288,10 @@
                                         Theo dõi
                                     </button>
 
-                                @if($order->items->count() > 0 &&
-                                    (
+                                @if(
+                                    !$isCancelled &&
+                                    $order->items->count() > 0 &&
+                                    (   
                                         $order->status === 'completed' ||
                                         $order->process_status === 'completed'
                                     )

@@ -137,9 +137,13 @@ class OrderController extends Controller
             'address' => $validated['address'],
             'note' => $validated['note'] ?? null,
             'payment_method' => $validated['payment_method'],
+            'payment_status' => $validated['payment_method'] === 'cod' ? 'unpaid' : 'unpaid',
             'total_amount' => $totalAmount,
             'status' => 'pending',
-            'process_status' => 'received',
+            'payment_status' => $validated['payment_method'] === 'bank' ? 'unpaid' : 'unpaid',
+            'process_status' => $validated['payment_method'] === 'bank'
+                ? 'waiting_payment'
+                : 'received',
         ]);
 
         foreach ($cartItems as $item) {
@@ -156,10 +160,18 @@ class OrderController extends Controller
 
         CartItem::where('user_id', Auth::id())->delete();
 
+        DB::commit();
+
+        if ($order->payment_method === 'bank') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Vui lòng quét mã QR để thanh toán.',
+                'redirect' => route('bank.payment', $order->id),
+            ]);
+        }
+
         session()->flash('order_code', $orderCode);
         session()->flash('order_date', now()->format('d/m/Y - H:i'));
-
-        DB::commit();
 
         return response()->json([
             'success' => true,
@@ -176,11 +188,45 @@ class OrderController extends Controller
     }
 }
 
+public function bankPayment(Order $order)
+{
+    if ($order->user_id !== Auth::id()) {
+        abort(403);
+    }
+
+    if ($order->payment_method !== 'bank') {
+        return redirect()->route('thankyou');
+    }
+
+    return view('payments.bank_qr', compact('order'));
+}
+
+public function confirmBankPayment(Order $order)
+{
+    if ($order->user_id !== Auth::id()) {
+        abort(403);
+    }
+
+    if ($order->payment_method !== 'bank') {
+        abort(400);
+    }
+
+    $order->update([
+        'payment_status' => 'paid',
+        'paid_at' => now(),
+        'transaction_code' => 'BANK-DEMO-' . now()->format('YmdHis'),
+        'process_status' => 'received',
+        'status' => 'pending',
+    ]);
+
+    session()->flash('order_code', $order->code);
+    session()->flash('order_date', $order->created_at->format('d/m/Y - H:i'));
+
+    return redirect()->route('thankyou');
+}
 public function adminNotifications()
 {
-    $notifications = Notification::whereNull('user_id')
-        ->latest()
-        ->get();
+    $notifications = Notification::latest()->get();
 
     return view('admin.notifications', compact('notifications'));
 }
@@ -240,14 +286,17 @@ public function getDetailApi($id)
         $price = $item->price ?? $item->unit_price ?? 0;
 
         $items[] = [
-            'name' => $item->product->name ?? 'Sản phẩm',
+            'name' => $item->name ?? $item->product->name ?? 'Sản phẩm',
             'quantity' => $item->quantity,
             'price' => $price,
             'subtotal' => $price * $item->quantity,
         ];
     }
 
-    return response()->json([
+    $paymentStatus = $order->payment_status ?? 'unpaid';
+    $isPaid = $paymentStatus === 'paid';
+
+  return response()->json([
         'success' => true,
         'order' => [
             'id' => $order->id,
@@ -255,14 +304,23 @@ public function getDetailApi($id)
             'status' => $order->status,
             'process_status' => $order->process_status ?? 'received',
             'created_at' => $order->created_at->toDateTimeString(),
-            'name' => $order->name ?? $order->customer_name ?? $order->receiver_name ?? '',
-            'phone' => $order->phone ?? $order->customer_phone ?? '',
+
+            'name' => $order->name ?? '',
+            'phone' => $order->phone ?? '',
             'address' => $order->address ?? '',
             'buyer_email' => $order->user->email ?? '',
-            'total_amount' => $order->total_amount,
+
+            'payment_method' => $order->payment_method ?? 'cod',
+            'payment_status' => $order->payment_status ?? 'unpaid',
+            'is_paid' => ($order->payment_status ?? 'unpaid') === 'paid',
+
+            'original_total_amount' => $order->total_amount,
+            'total_amount' => (($order->payment_status ?? 'unpaid') === 'paid') ? 0 : $order->total_amount,
+
             'items' => $items,
         ]
     ]);
+
 }
 
 public function history(Request $request)
@@ -307,7 +365,7 @@ public function updateProcess(Request $request, $id)
     }
 
     $request->validate([
-        'process_status' => 'required|in:received,preparing,shipping,completed',
+        'process_status' => 'required|in:waiting_payment,received,preparing,shipping,completed,cancelled',
     ]);
 
     $order = \App\Models\Order::findOrFail($id);
@@ -316,7 +374,15 @@ public function updateProcess(Request $request, $id)
     $oldStatus = $order->process_status;
 
     $order->process_status = $request->process_status;
-    $order->status = $request->process_status === 'completed' ? 'completed' : 'pending';
+
+    if ($request->process_status === 'cancelled') {
+        $order->status = 'cancelled';
+    } elseif ($request->process_status === 'completed') {
+        $order->status = 'completed';
+    } else {
+        $order->status = 'pending';
+    }
+
     $order->save();
 
     // Thoongh báo
@@ -348,6 +414,12 @@ public function updateProcess(Request $request, $id)
 
                 <b>Chúc bạn ăn ngon miệng!</b>
                 ";
+                break;
+
+            case 'cancelled':
+                $title = 'Đơn hàng đã bị hủy';
+                $message = "Đơn hàng <strong>{$order->code}</strong> của bạn đã bị hủy, vui lòng kiểm tra lại hoặc đặt đơn hàng mới.";
+                break;
         }
 
         Notification::create([

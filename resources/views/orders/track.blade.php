@@ -1,11 +1,13 @@
 @php
     $process = $order->process_status ?? 'received';
+    $isCancelled = $process === 'cancelled' || $order->status === 'cancelled';
 
     $statusMap = [
         'received' => 'Chờ tiếp nhận',
         'preparing' => 'Chuẩn bị đơn hàng',
         'shipping' => 'Đang giao hàng',
         'completed' => 'Hoàn tất đơn hàng',
+        'cancelled' => 'Đã hủy đơn hàng',
     ];
 
     $currentStep = match($process) {
@@ -13,6 +15,7 @@
         'preparing' => 2,
         'shipping' => 3,
         'completed' => 4,
+        'cancelled' => 0,
         default => 1,
     };
 @endphp
@@ -52,8 +55,8 @@
 
             <div class="rounded-2xl border border-brown-100 bg-brown-50 px-4 py-4">
                 <div class="text-[11px] uppercase tracking-wider text-brown-400 font-semibold mb-2">Tình trạng</div>
-                <div class="inline-flex items-center gap-2 text-sm font-semibold text-green-700">
-                    <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                <div class="inline-flex items-center gap-2 text-sm font-semibold {{ $isCancelled ? 'text-red-700' : 'text-green-700' }}">
+                    <span class="w-2.5 h-2.5 rounded-full {{ $isCancelled ? 'bg-red-500' : 'bg-green-500' }}"></span>
                     {{ $statusMap[$process] ?? 'Chờ tiếp nhận' }}
                 </div>
             </div>
@@ -91,6 +94,24 @@
             @endforelse
         </div>
     </div> 
+
+    @if($isCancelled)
+        <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                    <span class="iconify text-xl" data-icon="lucide:circle-x"></span>
+                </div>
+                <div>
+                    <div class="text-sm font-bold text-red-700">
+                        Đơn hàng của bạn đã bị hủy
+                    </div>
+                    <div class="text-sm text-red-600 mt-1 leading-relaxed">
+                        Đơn hàng của bạn đã bị hủy, vui lòng kiểm tra lại hoặc đặt đơn hàng mới.
+                    </div>
+                </div>
+            </div>
+        </div>
+    @else
 
         <div class="rounded-2xl border border-brown-100 bg-white p-5">
             <h3 class="text-base font-bold text-brown-900 mb-5">Quy trình xử lý đơn hàng</h3>
@@ -149,6 +170,7 @@
             </div>
         </div>
 
+    @endif
         <div class="mt-6 flex justify-end">
             <button type="button"
                     onclick="closeTrackModal()"
