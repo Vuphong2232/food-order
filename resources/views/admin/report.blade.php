@@ -67,16 +67,24 @@
                 <p class="text-brown-500 text-sm mt-1">Dữ liệu được cập nhật theo thời gian thực từ đơn hàng.</p>
             </div>
 
-            <div class="bg-white p-1.5 rounded-2xl shadow-sm border border-brown-100 inline-flex w-full md:w-auto">
-                <button onclick="updateStats('week')" id="tab-week" class="tab-btn active flex-1 md:flex-none px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-300">
+            <div class="flex items-center gap-2 bg-white border border-brown-100 rounded-2xl p-1 shadow-sm">
+                <a href="{{ route('admin.report', ['period' => 'week']) }}"
+                class="px-7 py-3 rounded-xl text-sm font-semibold transition
+                {{ ($period ?? request('period', 'year')) == 'week' ? 'bg-brown-700 text-white shadow' : 'text-brown-500 hover:bg-brown-50' }}">
                     Tuần này
-                </button>
-                <button onclick="updateStats('month')" id="tab-month" class="tab-btn flex-1 md:flex-none px-6 py-2 rounded-xl text-sm font-semibold text-brown-500 hover:bg-brown-50 transition-all duration-300">
+                </a>
+
+                <a href="{{ route('admin.report', ['period' => 'month']) }}"
+                class="px-7 py-3 rounded-xl text-sm font-semibold transition
+                {{ ($period ?? request('period', 'year')) == 'month' ? 'bg-brown-700 text-white shadow' : 'text-brown-500 hover:bg-brown-50' }}">
                     Tháng này
-                </button>
-                <button onclick="updateStats('year')" id="tab-year" class="tab-btn flex-1 md:flex-none px-6 py-2 rounded-xl text-sm font-semibold text-brown-500 hover:bg-brown-50 transition-all duration-300">
+                </a>
+
+                <a href="{{ route('admin.report', ['period' => 'year']) }}"
+                class="px-7 py-3 rounded-xl text-sm font-semibold transition
+                {{ ($period ?? request('period', 'year')) == 'year' ? 'bg-brown-700 text-white shadow' : 'text-brown-500 hover:bg-brown-50' }}">
                     Năm nay
-                </button>
+                </a>
             </div>
         </div>
 

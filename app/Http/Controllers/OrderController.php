@@ -241,10 +241,17 @@ public function getNotificationCount()
 public function userNotifications()
 {
     $notifications = Notification::where('user_id', auth()->id())
+        ->whereIn('type', [
+            'order_process_updated',
+            'order_status_updated',
+            'order_completed',
+            'order_cancelled',
+            'payment_success',
+        ])
         ->latest()
         ->get();
 
-    return view('admin.notifications', compact('notifications'));
+    return view('user.notifications', compact('notifications'));
 }
 
     /**
@@ -385,56 +392,69 @@ public function updateProcess(Request $request, $id)
 
     $order->save();
 
-    // Thoongh báo
-    if ($order->user_id) {
+    // Thông báo cho người dùng khi admin cập nhật trạng thái đơn hàng
+if (!empty($order->user_id)) {
+    $title = 'Cập nhật đơn hàng';
 
-        $title = 'Cập nhật đơn hàng';
-        $message = '';
+    switch ($order->process_status) {
+        case 'waiting_payment':
+            $message = "Đơn hàng <strong>{$order->code}</strong> đang chờ thanh toán.";
+            $type = 'order_process_updated';
+            break;
 
-        switch ($order->process_status) {
-            case 'received':
-                $message = "Đơn hàng <strong>{$order->code}</strong> đã được tiếp nhận.";
-                break;
+        case 'received':
+            $message = "Đơn hàng <strong>{$order->code}</strong> đã được tiếp nhận.";
+            $type = 'order_process_updated';
+            break;
 
-            case 'preparing':
-                $message = "Đơn hàng <strong>{$order->code}</strong> đang được chuẩn bị.";
-                break;
+        case 'preparing':
+            $message = "Đơn hàng <strong>{$order->code}</strong> đang được chuẩn bị.";
+            $type = 'order_process_updated';
+            break;
 
-            case 'shipping':
-                $message = "Đơn hàng <strong>{$order->code}</strong> đang được giao, hãy chú ý điện thoại nhé.";
-                break;
+        case 'shipping':
+            $message = "Đơn hàng <strong>{$order->code}</strong> đang được giao, hãy chú ý điện thoại nhé.";
+            $type = 'order_process_updated';
+            break;
 
-            case 'completed':
-                $message = "
+        case 'completed':
+            $title = 'Cảm ơn bạn đã mua hàng';
+            $message = "
                 Đơn hàng <strong>{$order->code}</strong> đã hoàn tất 🎉<br>
-                Cảm ơn bạn đã ủng hộ ❤️<br><br>
-
+                Cảm ơn bạn đã ủng hộ Món Ngon ❤️<br><br>
                 ⭐ Nếu bạn hài lòng, hãy đánh giá 5 sao để ủng hộ shop nhé!<br>
                 💬 Nếu có góp ý, đừng ngại để lại bình luận để shop cải thiện tốt hơn.<br><br>
-
                 <b>Chúc bạn ăn ngon miệng!</b>
-                ";
-                break;
+            ";
+            $type = 'order_completed';
+            break;
 
-            case 'cancelled':
-                $title = 'Đơn hàng đã bị hủy';
-                $message = "Đơn hàng <strong>{$order->code}</strong> của bạn đã bị hủy, vui lòng kiểm tra lại hoặc đặt đơn hàng mới.";
-                break;
-        }
+        case 'cancelled':
+            $title = 'Đơn hàng đã bị hủy';
+            $message = "Đơn hàng <strong>{$order->code}</strong> của bạn đã bị hủy, vui lòng kiểm tra lại hoặc đặt đơn hàng mới.";
+            $type = 'order_cancelled';
+            break;
 
-        Notification::create([
-            'user_id' => $order->user_id,
-            'type' => 'order_process_updated',
-            'title' => $title,
-            'message' => $message,
-            'data' => [
-                'order_id' => $order->id,
-                'order_code' => $order->code,
-                'process_status' => $order->process_status,
-            ],
-            'is_read' => 0,
-        ]);
+        default:
+            $message = "Đơn hàng <strong>{$order->code}</strong> vừa được cập nhật trạng thái.";
+            $type = 'order_process_updated';
+            break;
     }
+
+    Notification::create([
+        'user_id' => $order->user_id,
+        'type' => $type,
+        'title' => $title,
+        'message' => $message,
+        'data' => [
+            'order_id' => $order->id,
+            'order_code' => $order->code,
+            'old_process_status' => $oldStatus,
+            'process_status' => $order->process_status,
+        ],
+        'is_read' => 0,
+    ]);
+}
 
     return response()->json([
         'success' => true,
@@ -490,46 +510,53 @@ public function adminReport(Request $request)
         abort(403, 'Bạn không có quyền truy cập trang này.');
     }
 
-    $period = $request->get('period', 'month');
+    $period = $request->get('period', 'week');
 
-    $completedOrderQuery = Order::where('process_status', 'completed');
+    $now = now();
 
-    $completedOrderQuery->when($period == 'week', function ($q) {
-        return $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-    })->when($period == 'month', function ($q) {
-        return $q->whereMonth('created_at', now()->month)
-                 ->whereYear('created_at', now()->year);
-    })->when($period == 'year', function ($q) {
-        return $q->whereYear('created_at', now()->year);
-    });
+    if ($period === 'week') {
+        // Từ thứ 2 đến chủ nhật
+        $startDate = now()->startOfWeek(\Carbon\Carbon::MONDAY)->startOfDay();
+        $endDate = now()->endOfWeek(\Carbon\Carbon::SUNDAY)->endOfDay();
+    } elseif ($period === 'month') {
+        // Từ ngày 1 đến ngày cuối tháng
+        $startDate = now()->startOfMonth()->startOfDay();
+        $endDate = now()->endOfMonth()->endOfDay();
+    } elseif ($period === 'year') {
+        // Từ 01/01 đến 31/12
+        $startDate = now()->startOfYear()->startOfDay();
+        $endDate = now()->endOfYear()->endOfDay();
+    } else {
+        // Mặc định nếu sai period
+        $period = 'week';
+        $startDate = now()->startOfWeek(\Carbon\Carbon::MONDAY)->startOfDay();
+        $endDate = now()->endOfWeek(\Carbon\Carbon::SUNDAY)->endOfDay();
+    }
 
-    $processingOrderQuery = Order::where('process_status', '!=', 'completed');
+    $completedOrderQuery = Order::whereBetween('created_at', [$startDate, $endDate])
+        ->where(function ($q) {
+            $q->where('status', 'completed')
+              ->orWhere('process_status', 'completed');
+        });
 
-    $processingOrderQuery->when($period == 'week', function ($q) {
-        return $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-    })->when($period == 'month', function ($q) {
-        return $q->whereMonth('created_at', now()->month)
-                 ->whereYear('created_at', now()->year);
-    })->when($period == 'year', function ($q) {
-        return $q->whereYear('created_at', now()->year);
-    });
+    $revenue = (clone $completedOrderQuery)->sum('total_amount');
 
-    $revenueQuery = Order::where('process_status', 'completed');
-
-    $revenueQuery->when($period == 'week', function ($q) {
-        return $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-    })->when($period == 'month', function ($q) {
-        return $q->whereMonth('created_at', now()->month)
-                 ->whereYear('created_at', now()->year);
-    })->when($period == 'year', function ($q) {
-        return $q->whereYear('created_at', now()->year);
-    });
-
-    $revenue = (clone $revenueQuery)->sum('total_amount');
     $ordersCount = (clone $completedOrderQuery)->count();
-    $processingOrders = (clone $processingOrderQuery)->count();
 
-    $topProductsQuery = OrderItem::select(
+    $processingOrders = Order::whereBetween('created_at', [$startDate, $endDate])
+    ->whereNotIn('status', ['completed', 'cancelled'])
+    ->whereNotIn('process_status', ['completed', 'cancelled'])
+    ->count();
+
+    $productsSold = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+        ->whereBetween('orders.created_at', [$startDate, $endDate])
+        ->where(function ($q) {
+            $q->where('orders.status', 'completed')
+              ->orWhere('orders.process_status', 'completed');
+        })
+        ->sum('order_items.quantity');
+
+    $topProducts = OrderItem::select(
             'products.id',
             'products.name',
             'products.image',
@@ -538,25 +565,23 @@ public function adminReport(Request $request)
         )
         ->join('products', 'order_items.product_id', '=', 'products.id')
         ->join('orders', 'order_items.order_id', '=', 'orders.id')
-        ->where('orders.process_status', 'completed');
-
-    $topProductsQuery->when($period == 'week', function ($q) {
-        return $q->whereBetween('orders.created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-    })->when($period == 'month', function ($q) {
-        return $q->whereMonth('orders.created_at', now()->month)
-                 ->whereYear('orders.created_at', now()->year);
-    })->when($period == 'year', function ($q) {
-        return $q->whereYear('orders.created_at', now()->year);
-    });
-
-    $topProducts = $topProductsQuery
-        ->groupBy('products.id', 'products.name', 'products.image', 'products.price')
+        ->whereBetween('orders.created_at', [$startDate, $endDate])
+        ->where(function ($q) {
+            $q->where('orders.status', 'completed')
+              ->orWhere('orders.process_status', 'completed');
+        })
+        ->groupBy(
+            'products.id',
+            'products.name',
+            'products.image',
+            'products.price'
+        )
         ->orderByDesc('sold_count')
         ->limit(3)
         ->get()
         ->map(function ($p) {
             if (!$p->image) {
-                $p->image_url = 'https://flycamgiare.vn/wp-content/uploads/2026/03/Flycam-DJi-Avata-360-canh.jpg';
+                $p->image_url = 'https://via.placeholder.com/300';
             } elseif (str_starts_with($p->image, 'http://') || str_starts_with($p->image, 'https://')) {
                 $p->image_url = $p->image;
             } else {
@@ -566,30 +591,31 @@ public function adminReport(Request $request)
             return $p;
         });
 
-    $newUsersQuery = User::query();
 
-    $newUsersQuery->when($period == 'week', function ($q) {
-        return $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-    })->when($period == 'month', function ($q) {
-        return $q->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year);
-    })->when($period == 'year', function ($q) {
-        return $q->whereYear('created_at', now()->year);
-    });
+    $newUsers = User::whereBetween('created_at', [$startDate, $endDate])
+        ->count();
 
-    $newUsers = $newUsersQuery->count();
+
     $avgOrderValue = $ordersCount > 0 ? $revenue / $ordersCount : 0;
+
     $bestSellerIds = $topProducts->pluck('id')->toArray();
 
     $reportStats = [
         'revenue' => $revenue,
         'orders_count' => $ordersCount,
-        'products_sold' => $topProducts->sum('sold_count'),
+        'products_sold' => $productsSold,
         'processing_orders' => $processingOrders,
         'avg_order_value' => $avgOrderValue,
         'new_users' => $newUsers,
     ];
 
-    return view('report-page', compact('reportStats', 'topProducts', 'bestSellerIds'));
+    return view('report-page', compact(
+        'reportStats',
+        'topProducts',
+        'bestSellerIds',
+        'period',
+        'startDate',
+        'endDate'
+    ));
 }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AdminNotificationController;
+use App\Http\Controllers\UserNotificationController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
@@ -103,7 +104,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/admin/thong-ke', [OrderController::class, 'adminReport'])->name('admin.report');
     Route::get('/admin/notifications', [AdminNotificationController::class, 'index'])->name('admin.notifications');
-    Route::get('/thong-bao', [OrderController::class, 'userNotifications'])->name('user.notifications');
+    Route::get('/thong-bao', [UserNotificationController::class, 'index'])->name('user.notifications')->middleware('auth');
     Route::get('/lien-he', [ContactController::class, 'index'])->name('contact')->middleware('auth');
     Route::post('/lien-he', [ContactController::class, 'submit'])->name('contact.submit')->middleware('auth');
 });

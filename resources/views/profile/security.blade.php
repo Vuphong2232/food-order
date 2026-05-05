@@ -17,7 +17,7 @@
 
     <!-- TEXT -->
     <div>
-        <h1 class="text-3xl font-bold text-brown-900">Thông tin cá nhân</h1>
+        <h1 class="text-3xl font-bold text-brown-900">Đổi mật khẩu</h1>
         <p class="text-brown-500 mt-1">Quản lý thông tin hồ sơ của bạn</p>
     </div>
 
