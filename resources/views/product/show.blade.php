@@ -54,11 +54,13 @@
                     </div>
 
                     <div class="mt-10">
-                        <button
-                            onclick="addToCart({{ $selectedProduct->id }}, '{{ addslashes($selectedProduct->name) }}', {{ $selectedProduct->price }}, '{{ $selectedProduct->image_url }}')"
-                            class="w-full h-14 rounded-2xl bg-brown-600 text-white text-xl font-bold hover:bg-brown-700 transition">
-                            Thêm vào giỏ
-                        </button>
+                    <button
+                        type="button"
+                        data-url="{{ route('cart.store') }}"
+                        onclick="addToCart(this, {{ $selectedProduct->id }}, '{{ addslashes($selectedProduct->name) }}')"
+                        class="w-full h-14 rounded-2xl bg-brown-600 text-white text-xl font-bold hover:bg-brown-700 transition">
+                        Thêm vào giỏ
+                    </button>
 
                         @php
                             $reviews = $selectedProduct->reviews;

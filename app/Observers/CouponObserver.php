@@ -18,7 +18,7 @@ class CouponObserver
             'message' => "Bạn vừa tạo mã giảm giá <strong class='text-brown-900'>{$coupon->code}</strong> (Giảm {$coupon->discount_percent}%).",
             'data' => ['coupon_id' => $coupon->id],
             'is_read' => false,
-            'user_id' => auth()->id(),
+            'user_id' => null,
         ]);
     }
 
@@ -33,7 +33,7 @@ class CouponObserver
             'message' => "Mã giảm giá <strong class='text-brown-900'>{$coupon->code}</strong> đã được cập nhật thông tin.",
             'data' => ['coupon_id' => $coupon->id],
             'is_read' => false,
-            'user_id' => auth()->id(),
+            'user_id' => null,
         ]);
     }
 
@@ -48,7 +48,7 @@ class CouponObserver
             'message' => "Mã giảm giá <strong class='text-brown-900'>{$coupon->code}</strong> đã bị xóa khỏi hệ thống.",
             'data' => ['coupon_id' => $coupon->id],
             'is_read' => false,
-            'user_id' => auth()->id(),
+            'user_id' => null,
         ]);
     }
 }

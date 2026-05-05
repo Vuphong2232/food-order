@@ -85,15 +85,40 @@ window.showToast = function(message, type = 'success') {
 // =====================
 // Cart
 // =====================
-function addToCart(id, name, price, img) {
-    var existing = cart.find(function(c) { return c.id === id; });
-    if (existing) {
-        existing.qty++;
-    } else {
-        cart.push({ id: id, name: name, price: price, img: img, qty: 1 });
+function addToCart(button, id, name) {
+    const url = button.dataset.url;
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+
+    if (!csrfMeta) {
+        console.error('Thiếu meta csrf-token trong layout');
+        showToast('Thiếu CSRF token');
+        return;
     }
-    updateCartUI();
-    showToast('Đã thêm "' + name + '" vào giỏ hàng');
+
+    fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": csrfMeta.content,
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({
+            product_id: id,
+            quantity: 1
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message || ('Đã thêm "' + name + '" vào giỏ hàng'));
+        } else {
+            showToast(data.message || "Không thể thêm vào giỏ hàng");
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        showToast("Có lỗi xảy ra khi thêm vào giỏ hàng");
+    });
 }
 
 function removeFromCart(id) {
